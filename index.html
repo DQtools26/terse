@@ -132,6 +132,23 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 .bm-track{height:6px;border-radius:3px;background:rgba(255,255,255,0.12);overflow:hidden;margin-top:14px;}
 .bm-fill{height:100%;border-radius:3px;transition:width 1.2s cubic-bezier(0.4,0,0.2,1),background-color 0.5s;}
 .bm-summary{font-size:13px;color:var(--text2);margin-top:10px;line-height:1.6;}
+.bm-breakdown-btn{display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;font-family:'DM Sans',sans-serif;margin-top:12px;padding:0;transition:color 0.2s;}
+.bm-breakdown-btn:hover{color:var(--text);}
+.bm-breakdown{display:none;margin-top:12px;border-top:1px solid var(--glass-border);padding-top:12px;}
+.bm-breakdown.open{display:block;}
+.bm-what{font-size:11px;color:var(--text3);line-height:1.6;margin-bottom:12px;padding:10px;background:rgba(255,255,255,0.06);border-radius:8px;}
+.bm-line{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);}
+.bm-line:last-child{border-bottom:none;}
+.bm-line-ico{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+.bm-line-label{flex:1;font-size:13px;color:var(--text2);}
+.bm-line-pts{font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;flex-shrink:0;}
+.bm-line-pts.floor{color:var(--red);}
+.bm-line-pts.bonus{color:var(--orange);}
+.bm-line-pts.cond{color:var(--yellow);}
+.bm-line-pts.none{color:var(--text3);}
+.bm-total-row{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--glass-border);}
+.bm-total-lbl{font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);}
+.bm-total-val{font-family:'Outfit',sans-serif;font-size:20px;font-weight:900;letter-spacing:-0.5px;}
 
 .out-card{padding:18px 20px;margin-bottom:12px;}
 .out-q{font-family:'Outfit',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;}
@@ -571,17 +588,53 @@ async function fetchWeather(){
     if(!pt.ok)throw new Error('NWS cannot find this location. NWS only covers the US — try a different city.');
     const p=(await pt.json()).properties;
     S.gridId=p.gridId;S.gridX=p.gridX;S.gridY=p.gridY;
-    S.zone=p.forecastZone?.split('/').pop()||p.county?.split('/').pop();
-    const[fc,hr,al,gr]=await Promise.allSettled([
+    // Store BOTH zone IDs — tornado warnings often come on county zone, not forecast zone
+    S.forecastZone=p.forecastZone?.split('/').pop()||null;
+    S.countyZone=p.county?.split('/').pop()||null;
+    S.zone=S.forecastZone||S.countyZone;
+
+    const[fc,hr,alFZ,alCZ,gr]=await Promise.allSettled([
       fetch(`https://api.weather.gov/gridpoints/${S.gridId}/${S.gridX},${S.gridY}/forecast`,{headers:{'User-Agent':'TerseWeather/2.0'}}),
       fetch(`https://api.weather.gov/gridpoints/${S.gridId}/${S.gridX},${S.gridY}/forecast/hourly`,{headers:{'User-Agent':'TerseWeather/2.0'}}),
-      S.zone?fetch(`https://api.weather.gov/alerts/active?zone=${S.zone}`,{headers:{'User-Agent':'TerseWeather/2.0'}}):Promise.resolve(null),
+      S.forecastZone?fetch(`https://api.weather.gov/alerts/active?zone=${S.forecastZone}`,{headers:{'User-Agent':'TerseWeather/2.0'}}):Promise.resolve(null),
+      S.countyZone?fetch(`https://api.weather.gov/alerts/active?zone=${S.countyZone}`,{headers:{'User-Agent':'TerseWeather/2.0'}}):Promise.resolve(null),
       fetch(`https://api.weather.gov/gridpoints/${S.gridId}/${S.gridX},${S.gridY}`,{headers:{'User-Agent':'TerseWeather/2.0'}}),
     ]);
     if(fc.status==='fulfilled'&&fc.value.ok)S.forecast=(await fc.value.json()).properties;
     if(hr.status==='fulfilled'&&hr.value.ok)S.hourly=(await hr.value.json()).properties;
-    S.alerts=al.status==='fulfilled'&&al.value?.ok?(await al.value.json()).features||[]:[];
     if(gr.status==='fulfilled'&&gr.value.ok)S.gridRaw=(await gr.value.json()).properties;
+
+    // Merge alerts from BOTH zones, deduplicate by alert ID — never drop any alert
+    const alertsA=alFZ.status==='fulfilled'&&alFZ.value?.ok?(await alFZ.value.json()).features||[]:[];
+    const alertsB=alCZ.status==='fulfilled'&&alCZ.value?.ok?(await alCZ.value.json()).features||[]:[];
+    const seen=new Set();
+    S.alerts=[...alertsA,...alertsB].filter(a=>{
+      const id=a.id||a.properties?.id||JSON.stringify(a.properties?.event)+a.properties?.onset;
+      if(seen.has(id))return false;
+      seen.add(id);
+      return true;
+    });
+    // Sort: most severe first so UI always leads with worst alert
+    const alertRank=ev=>{
+      const e=(ev||'').toLowerCase();
+      if(e.includes('tornado warning'))return 100;
+      if(e.includes('severe thunderstorm warning'))return 90;
+      if(e.includes('flash flood warning'))return 85;
+      if(e.includes('blizzard warning'))return 80;
+      if(e.includes('ice storm warning'))return 78;
+      if(e.includes('winter storm warning'))return 75;
+      if(e.includes('flood warning'))return 70;
+      if(e.includes('high wind warning'))return 65;
+      if(e.includes('excessive heat warning'))return 60;
+      if(e.includes('warning'))return 55;
+      if(e.includes('tornado watch'))return 50;
+      if(e.includes('severe thunderstorm watch'))return 45;
+      if(e.includes('watch'))return 40;
+      if(e.includes('advisory'))return 20;
+      return 10;
+    };
+    S.alerts.sort((a,b)=>alertRank(b.properties?.event)-alertRank(a.properties?.event));
+
     S.loaded=true;
     renderAll();
   }catch(e){
@@ -638,63 +691,87 @@ function isActivelyBad(){
   const snow=sf.includes('snow')||sf.includes('sleet')||sf.includes('blizzard')||sf.includes('ice pellet');
   return{rain,storm,snow};
 }
+// Returns {score, lines} — lines is the breakdown for the UI
 function calcBad(){
-  let s=0;
-  // Alerts are the biggest driver — only one alert at a time counts (take the worst)
-  const alertScores=(S.alerts||[]).map(a=>{
+  let alertFloor=0;
+  let alertBonus=0;
+  const lines=[];
+
+  // Alerts
+  (S.alerts||[]).forEach(a=>{
     const e=(a.properties?.event||'').toLowerCase();
-    if(e.includes('tornado warning'))return 80;
-    if(e.includes('tornado watch'))return 45;
-    if(e.includes('severe thunderstorm warning'))return 55;
-    if(e.includes('severe thunderstorm watch'))return 30;
-    if(e.includes('flash flood warning'))return 50;
-    if(e.includes('flood warning'))return 35;
-    if(e.includes('blizzard warning'))return 45;
-    if(e.includes('winter storm warning'))return 38;
-    if(e.includes('ice storm warning'))return 42;
-    if(e.includes('excessive heat warning'))return 30;
-    if(e.includes('heat advisory'))return 18;
-    if(e.includes('high wind warning'))return 22;
-    if(e.includes('wind advisory'))return 12;
-    if(e.includes('dense fog'))return 18;
-    if(e.includes('watch'))return 20;
-    if(e.includes('warning'))return 25;
-    return 10;
+    const name=a.properties?.event||'Alert';
+    let floor=0,bonus=0,ico='⚠️';
+    if(e.includes('tornado warning')){floor=90;ico='🌪️';}
+    else if(e.includes('severe thunderstorm warning')){floor=70;ico='⛈️';}
+    else if(e.includes('flash flood warning')){floor=60;ico='🌊';}
+    else if(e.includes('ice storm warning')){floor=58;ico='🧊';}
+    else if(e.includes('blizzard warning')){floor=55;ico='❄️';}
+    else if(e.includes('winter storm warning')){floor=50;ico='❄️';}
+    else if(e.includes('flood warning')){floor=45;ico='🌊';}
+    else if(e.includes('high wind warning')){floor=40;ico='💨';}
+    else if(e.includes('excessive heat warning')){floor=38;ico='🔥';}
+    else if(e.includes('tornado watch')){bonus=35;ico='🌪️';}
+    else if(e.includes('severe thunderstorm watch')){bonus=28;ico='⛈️';}
+    else if(e.includes('heat advisory')){bonus=18;ico='🌡️';}
+    else if(e.includes('wind advisory')){bonus=14;ico='💨';}
+    else if(e.includes('dense fog advisory')){bonus=16;ico='🌫️';}
+    else if(e.includes('watch')){bonus=22;ico='👀';}
+    else if(e.includes('warning')){bonus=20;ico='⚠️';}
+    else{bonus=8;}
+    if(floor>alertFloor)alertFloor=floor;
+    alertBonus+=bonus;
+    if(floor>0)lines.push({ico,label:name,pts:floor,type:'floor'});
+    else if(bonus>0)lines.push({ico,label:name,pts:'+'+bonus,type:'bonus'});
   });
-  // Add worst alert + half of second-worst (stacking alerts matters but not linearly)
-  if(alertScores.length){
-    alertScores.sort((a,b)=>b-a);
-    s+=alertScores[0];
-    if(alertScores[1])s+=Math.round(alertScores[1]*0.5);
-    if(alertScores[2])s+=Math.round(alertScores[2]*0.25);
-  }
+
+  // Conditions
+  let condScore=0;
   const p=getCur();
   if(p){
     const tf=tF(p),wf=wSpd(p),pf=prec(p),sf=sh(p).toLowerCase();
-    // Temperature extremes
-    if(tf>=105)s+=25;else if(tf>=100)s+=18;else if(tf>=95)s+=10;else if(tf>=90)s+=4;
-    if(tf<=-10)s+=25;else if(tf<=0)s+=18;else if(tf<=10)s+=12;else if(tf<=20)s+=6;else if(tf<=32)s+=3;
+    let pts;
+    // Temp extremes
+    if(tf>=105){pts=22;}else if(tf>=100){pts=16;}else if(tf>=95){pts=8;}else pts=0;
+    if(pts){condScore+=pts;lines.push({ico:'🌡️',label:`Extreme heat (${fmt(tf)})`,pts:'+'+pts,type:'cond'});}
+    let coldPts=0;
+    if(tf<=-10){coldPts=22;}else if(tf<=0){coldPts=16;}else if(tf<=10){coldPts=10;}else if(tf<=20){coldPts=5;}
+    if(coldPts){condScore+=coldPts;lines.push({ico:'🥶',label:`Extreme cold (${fmt(tf)})`,pts:'+'+coldPts,type:'cond'});}
     // Wind
-    if(wf>=60)s+=25;else if(wf>=50)s+=18;else if(wf>=40)s+=12;else if(wf>=30)s+=7;else if(wf>=20)s+=3;
+    let wpts=0;
+    if(wf>=60){wpts=22;}else if(wf>=50){wpts=16;}else if(wf>=40){wpts=10;}else if(wf>=30){wpts=6;}else if(wf>=20){wpts=2;}
+    if(wpts){condScore+=wpts;lines.push({ico:'💨',label:`Wind ${wf} mph`,pts:'+'+wpts,type:'cond'});}
     // Precip chance
-    if(pf>=90)s+=18;else if(pf>=70)s+=12;else if(pf>=50)s+=7;else if(pf>=30)s+=3;
-    // Active conditions in shortForecast
-    if(sf.includes('tornado'))s+=40;
-    else if(sf.includes('thunder')||sf.includes('t-storm'))s+=18;
-    if(sf.includes('heavy rain')||sf.includes('heavy shower'))s+=12;
-    else if(sf.includes('rain')||sf.includes('shower')||sf.includes('drizzle'))s+=6;
-    if(sf.includes('blizzard'))s+=25;
-    else if(sf.includes('heavy snow'))s+=18;
-    else if(sf.includes('snow')||sf.includes('sleet'))s+=10;
-    else if(sf.includes('freezing'))s+=12;
-    if(sf.includes('dense fog')||sf.includes('heavy fog'))s+=15;
-    else if(sf.includes('fog'))s+=7;
-    if(sf.includes('ice storm'))s+=22;
+    let ppts=0;
+    if(pf>=90){ppts=16;}else if(pf>=70){ppts=10;}else if(pf>=50){ppts=6;}else if(pf>=30){ppts=3;}else if(pf>=10){ppts=1;}
+    if(ppts){condScore+=ppts;lines.push({ico:'🌧️',label:`${pf}% precipitation chance`,pts:'+'+ppts,type:'cond'});}
+    // Active forecast conditions
+    if(sf.includes('tornado')){condScore+=35;lines.push({ico:'🌪️',label:'Tornado in forecast',pts:'+35',type:'cond'});}
+    else if(sf.includes('thunder')||sf.includes('t-storm')){condScore+=16;lines.push({ico:'⛈️',label:'Thunderstorms forecast',pts:'+16',type:'cond'});}
+    if(sf.includes('heavy rain')||sf.includes('heavy shower')){condScore+=10;lines.push({ico:'🌧️',label:'Heavy rain',pts:'+10',type:'cond'});}
+    else if(sf.includes('rain')||sf.includes('shower')||sf.includes('drizzle')){condScore+=5;lines.push({ico:'🌦️',label:'Rain / showers',pts:'+5',type:'cond'});}
+    if(sf.includes('blizzard')){condScore+=22;lines.push({ico:'🌨️',label:'Blizzard conditions',pts:'+22',type:'cond'});}
+    else if(sf.includes('heavy snow')){condScore+=16;lines.push({ico:'❄️',label:'Heavy snow',pts:'+16',type:'cond'});}
+    else if(sf.includes('snow')||sf.includes('sleet')){condScore+=8;lines.push({ico:'🌨️',label:'Snow / sleet',pts:'+8',type:'cond'});}
+    else if(sf.includes('freezing')){condScore+=10;lines.push({ico:'🧊',label:'Freezing precipitation',pts:'+10',type:'cond'});}
+    if(sf.includes('ice storm')){condScore+=20;lines.push({ico:'🧊',label:'Ice storm',pts:'+20',type:'cond'});}
+    if(sf.includes('dense fog')||sf.includes('heavy fog')){condScore+=13;lines.push({ico:'🌫️',label:'Dense fog',pts:'+13',type:'cond'});}
+    else if(sf.includes('fog')){condScore+=6;lines.push({ico:'🌫️',label:'Fog',pts:'+6',type:'cond'});}
   }
-  return Math.min(100,Math.round(s));
+
+  const noAlertScore=condScore+alertBonus;
+  const final=alertFloor>0
+    ? Math.max(alertFloor, Math.min(alertFloor+condScore*0.3+alertBonus*0.4, 100))
+    : Math.min(noAlertScore, 100);
+  const score=Math.round(final);
+
+  // If nothing contributed, say so
+  if(!lines.length)lines.push({ico:'✅',label:'No significant factors',pts:'',type:'none'});
+
+  return{score,lines};
 }
-function badCol(s){if(s<=15)return'#4ade80';if(s<=35)return'#a3e635';if(s<=55)return'#fbbf24';if(s<=75)return'#fb923c';return'#f87171';}
-function badLbl(s){if(s<=8)return'All clear';if(s<=20)return'Pretty calm';if(s<=35)return'Minor stuff';if(s<=50)return'Worth watching';if(s<=65)return'Getting dicey';if(s<=80)return'Not great';if(s<=92)return'Dangerous';return'TAKE SHELTER';}
+function badCol(s){if(s<=12)return'#4ade80';if(s<=30)return'#a3e635';if(s<=52)return'#fbbf24';if(s<=72)return'#fb923c';return'#f87171';}
+function badLbl(s){if(s<=6)return'All clear';if(s<=18)return'Pretty calm';if(s<=32)return'Minor stuff';if(s<=50)return'Worth watching';if(s<=65)return'Getting dicey';if(s<=80)return'Not great';if(s<=92)return'Dangerous';return'TAKE SHELTER';}
 
 // ─── TONE ENGINE ─────────────────────────────────────────────
 const T={
@@ -703,7 +780,7 @@ const T={
     fL(t,f){const d=f-t;if(d<=-10)return'Much colder than it looks due to wind chill.';if(d<=-5)return'Feels cooler due to wind.';if(d>=10)return'Humidity makes it feel hotter.';if(d>=5)return'Slightly warmer than the thermometer reads.';return'Feels close to the actual temperature.';},
     rL(p,s){if(p>=80)return`${p}% chance — rain is very likely. Carry an umbrella.`;if(p>=50)return`${p}% chance. An umbrella is a good idea.`;if(p>=30)return`${p}% chance. You may want an umbrella.`;return`${p}% chance. Rain is unlikely today.`;},
     wL(w){if(w>=50)return`Very strong winds at ${w} mph. Use caution.`;if(w>=35)return`Strong winds at ${w} mph.`;if(w>=20)return`Breezy at ${w} mph.`;if(w>=10)return`Light wind at ${w} mph.`;return'Calm winds.';},
-    cL(s){if(s.includes('clear')||s.includes('sunny'))return'Clear and sunny today.';if(s.includes('partly'))return'Partly cloudy skies.';return'Mostly cloudy or overcast.';},
+    cL(s){if(s.includes('sunny')||s.includes('clear'))return'Clear and sunny today.';if(s.includes('mostly sunny')||s.includes('mostly clear'))return'Mostly sunny with some clouds.';if(s.includes('partly'))return'Partly cloudy skies.';if(s.includes('mostly cloudy'))return'Mostly cloudy.';if(s.includes('cloud')||s.includes('overcast'))return'Cloudy skies today.';return'Varied sky conditions.';},
     snL(s){return s.includes('snow')||s.includes('ice')||s.includes('sleet')?'Wintry precipitation expected. Drive carefully.':null;},
     out(sc,ab){
       if(ab.storm)return{v:'NO',r:'It is actively storming right now. Stay inside.'};
@@ -720,7 +797,7 @@ const T={
     fL(t,f){const d=f-t;if(d<=-10)return'Looks can be deceiving. Wind makes it much colder.';if(d<=-5)return'Wind chill is doing its thing.';if(d>=10)return'Humidity is making a fool of that thermometer.';if(d>=5)return'Feels stickier than it looks.';return'What you see is what you get.';},
     rL(p,s){if(p>=80)return`${p}% chance. It's going to rain. Accept it.`;if(p>=50)return`${p}% chance. Umbrella probably wise.`;if(p>=30)return`${p}% chance. Maybe bring one.`;return`${p}% chance. Probably fine.`;},
     wL(w){if(w>=50)return`${w} mph. Your umbrella will not survive this.`;if(w>=35)return`${w} mph. Genuinely windy. Hold your stuff.`;if(w>=20)return`${w} mph. Breezy. Hair day: cancelled.`;if(w>=10)return`${w} mph. A gentle breeze.`;return'Basically still out there.';},
-    cL(s){if(s.includes('clear')||s.includes('sunny'))return'Clear! The sky is doing great.';if(s.includes('partly'))return"Some clouds, some sun. The sky can't commit.";return'Overcast. The sun called in sick.';},
+    cL(s){if(s.includes('sunny')||s.includes('clear'))return'Clear! The sky is doing great.';if(s.includes('mostly sunny')||s.includes('mostly clear'))return'Mostly sunny. Almost perfect.';if(s.includes('partly'))return"Some clouds, some sun. The sky can't commit.";if(s.includes('mostly cloudy'))return'Mostly cloudy. Sun is trying.';if(s.includes('cloud')||s.includes('overcast'))return'Overcast. The sun called in sick.';},
     snL(s){return s.includes('snow')||s.includes('ice')||s.includes('sleet')?'Wintry stuff incoming. Working from home is a valid life choice.':null;},
     out(sc,ab){
       if(ab.storm)return{v:'NO',r:"It's actively storming. Inside is the only correct answer."};
@@ -737,7 +814,7 @@ const T={
     fL(t,f){const d=f-t;if(d<=-10)return'LOOKS CAN BE DECEIVING. The wind is LYING to you. So much colder than it looks.';if(d<=-5)return'The wind is out here making everything worse. Classic.';if(d>=10)return'THE HUMIDITY IS MAKING A FOOL OF THAT THERMOMETER. Way stickier than it looks.';if(d>=5)return'Feels warmer than it is. The humidity is doing stuff.';return'The thermometer is being honest for once. Weird.';},
     rL(p,s){if(p>=80)return`${p}% chance. IT IS GOING TO RAIN. A LOT. You WILL get wet.`;if(p>=60)return`${p}% chance. Rain is coming for you. Your shoes will disagree.`;if(p>=40)return`${p}% chance. Could rain. Could not. The atmosphere is indecisive.`;return`${p}% chance. Probably fine. PROBABLY.`;},
     wL(w){if(w>=60)return`${w} MPH WINDS. YOUR HOUSE MIGHT HAVE OPINIONS ABOUT THIS.`;if(w>=45)return`${w} mph. YOUR UMBRELLA WILL NOT SURVIVE. Leave it home.`;if(w>=30)return`${w} mph. Your soda WILL spill. You have been warned.`;if(w>=15)return`${w} mph. Kinda breezy. Hair day is cancelled.`;return'Barely any wind. The air is just sitting there.';},
-    cL(s){if(s.includes('clear')||s.includes('sunny'))return'CLEAR SKIES!! THE SUN IS HERE AND THRIVING!!!';if(s.includes('partly'))return"Some clouds, some sun. The sky literally cannot decide.";return'Completely overcast. The sun took a personal day. Respect.';},
+    cL(s){if(s.includes('sunny')||s.includes('clear'))return'CLEAR SKIES!! THE SUN IS HERE AND THRIVING!!!';if(s.includes('mostly sunny')||s.includes('mostly clear'))return'Mostly clear!! Almost perfect!! Take it!!';if(s.includes('partly'))return"Some clouds, some sun. The sky literally cannot decide.";if(s.includes('mostly cloudy'))return'Mostly cloudy. The sun is trying its best.';if(s.includes('cloud')||s.includes('overcast'))return'Completely overcast. The sun took a personal day. Respect.';},
     snL(s){return s.includes('snow')||s.includes('ice')||s.includes('sleet')?'OK SO. IT\'S GONNA GET SLIPPERY AND COLD AND GROSS. Work may get cancelled. JUST PREPARE. OK???':null;},
     out(sc,ab){
       if(ab.storm)return{v:'NO!!!',r:"IT IS STORMING RIGHT NOW. WHY ARE YOU EVEN ASKING THIS. STAY INSIDE."};
@@ -753,6 +830,12 @@ const T={
 };
 function tone(){return T[S.tone]||T.terse;}
 
+function toggleBMBreakdown(btn){
+  const panel=btn.nextElementSibling;
+  const open=panel.classList.toggle('open');
+  btn.querySelector('span').textContent=open?'▾':'▸';
+}
+
 // ─── RENDER ALL ───────────────────────────────────────────────
 function renderAll(){
   renderHome();
@@ -760,7 +843,7 @@ function renderAll(){
   renderHourly();
   renderFutureSummary();
   renderFutureFull();
-  const sc=calcBad();
+  const {score:sc}=calcBad();
   const sb=document.getElementById('sb-meter');if(sb)sb.style.display='block';
   const sbs=document.getElementById('sb-score');if(sbs)sbs.textContent=sc+'%';
   const sbf=document.getElementById('sb-fill');if(sbf){sbf.style.width=sc+'%';sbf.style.backgroundColor=badCol(sc);}
@@ -774,7 +857,7 @@ function renderHome(){
   if(!cur){document.getElementById('home-inner').innerHTML='<div style="padding:40px;text-align:center;color:var(--text2)">No weather data.</div>';return;}
   const t=tone();
   const tf=tF(cur),wf=wSpd(cur),pf=prec(cur),hf=hum(cur),sf=sh(cur).toLowerCase();
-  const sc=calcBad(),col=badCol(sc);
+  const {score:sc,lines:bmLines}=calcBad(),col=badCol(sc);
   const ab=isActivelyBad();
   let feels=tf;
   if(hf!==null&&tf>80)feels=tf+(hf-50)*0.2;
@@ -818,6 +901,21 @@ function renderHome(){
       </div>
       <div class="bm-track"><div class="bm-fill" style="width:${sc}%;background-color:${col}"></div></div>
       <div class="bm-summary">${t.sum(sc)}</div>
+      <button class="bm-breakdown-btn" onclick="toggleBMBreakdown(this)">
+        <span>▸</span><span>Why is it ${sc}%?</span>
+      </button>
+      <div class="bm-breakdown">
+        <div class="bm-what">Scores how problematic today's weather is, 0–100. Calm day = low. Severe storm = high. Based on NWS alerts, wind, precipitation, temperature, and active conditions.</div>
+        ${bmLines.map(l=>`<div class="bm-line">
+          <div class="bm-line-ico">${l.ico}</div>
+          <div class="bm-line-label">${l.label}</div>
+          <div class="bm-line-pts ${l.type}">${l.pts}</div>
+        </div>`).join('')}
+        <div class="bm-total-row">
+          <div class="bm-total-lbl">Total Score</div>
+          <div class="bm-total-val" style="color:${col}">${sc}%</div>
+        </div>
+      </div>
     </div>
     <div class="glass-sm out-card">
       <div class="out-q">Should I go outside?</div>
