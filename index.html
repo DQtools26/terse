@@ -780,7 +780,7 @@ const T={
     fL(t,f){const d=f-t;if(d<=-10)return'Much colder than it looks due to wind chill.';if(d<=-5)return'Feels cooler due to wind.';if(d>=10)return'Humidity makes it feel hotter.';if(d>=5)return'Slightly warmer than the thermometer reads.';return'Feels close to the actual temperature.';},
     rL(p,s){if(p>=80)return`${p}% chance — rain is very likely. Carry an umbrella.`;if(p>=50)return`${p}% chance. An umbrella is a good idea.`;if(p>=30)return`${p}% chance. You may want an umbrella.`;return`${p}% chance. Rain is unlikely today.`;},
     wL(w){if(w>=50)return`Very strong winds at ${w} mph. Use caution.`;if(w>=35)return`Strong winds at ${w} mph.`;if(w>=20)return`Breezy at ${w} mph.`;if(w>=10)return`Light wind at ${w} mph.`;return'Calm winds.';},
-    cL(s){if(s.includes('sunny')||s.includes('clear'))return'Clear and sunny today.';if(s.includes('mostly sunny')||s.includes('mostly clear'))return'Mostly sunny with some clouds.';if(s.includes('partly'))return'Partly cloudy skies.';if(s.includes('mostly cloudy'))return'Mostly cloudy.';if(s.includes('cloud')||s.includes('overcast'))return'Cloudy skies today.';return'Varied sky conditions.';},
+    cL(s){if(s.includes('sunny')||s.includes('clear'))return'Clear and sunny today.';if(s.includes('mostly sunny')||s.includes('mostly clear'))return'Mostly sunny with some clouds.';if(s.includes('partly'))return'Partly cloudy skies.';if(s.includes('mostly cloudy'))return'Mostly cloudy.';if(s.includes('cloud')||s.includes('overcast'))return'Cloudy skies today.';return'Mixed sky conditions.';},
     snL(s){return s.includes('snow')||s.includes('ice')||s.includes('sleet')?'Wintry precipitation expected. Drive carefully.':null;},
     out(sc,ab){
       if(ab.storm)return{v:'NO',r:'It is actively storming right now. Stay inside.'};
@@ -797,7 +797,7 @@ const T={
     fL(t,f){const d=f-t;if(d<=-10)return'Looks can be deceiving. Wind makes it much colder.';if(d<=-5)return'Wind chill is doing its thing.';if(d>=10)return'Humidity is making a fool of that thermometer.';if(d>=5)return'Feels stickier than it looks.';return'What you see is what you get.';},
     rL(p,s){if(p>=80)return`${p}% chance. It's going to rain. Accept it.`;if(p>=50)return`${p}% chance. Umbrella probably wise.`;if(p>=30)return`${p}% chance. Maybe bring one.`;return`${p}% chance. Probably fine.`;},
     wL(w){if(w>=50)return`${w} mph. Your umbrella will not survive this.`;if(w>=35)return`${w} mph. Genuinely windy. Hold your stuff.`;if(w>=20)return`${w} mph. Breezy. Hair day: cancelled.`;if(w>=10)return`${w} mph. A gentle breeze.`;return'Basically still out there.';},
-    cL(s){if(s.includes('sunny')||s.includes('clear'))return'Clear! The sky is doing great.';if(s.includes('mostly sunny')||s.includes('mostly clear'))return'Mostly sunny. Almost perfect.';if(s.includes('partly'))return"Some clouds, some sun. The sky can't commit.";if(s.includes('mostly cloudy'))return'Mostly cloudy. Sun is trying.';if(s.includes('cloud')||s.includes('overcast'))return'Overcast. The sun called in sick.';},
+    cL(s){if(s.includes('sunny')||s.includes('clear'))return'Clear! The sky is doing great.';if(s.includes('mostly sunny')||s.includes('mostly clear'))return'Mostly sunny. Almost perfect.';if(s.includes('partly'))return"Some clouds, some sun. The sky can't commit.";if(s.includes('mostly cloudy'))return'Mostly cloudy. Sun is trying.';if(s.includes('cloud')||s.includes('overcast'))return'Overcast. The sun called in sick.';return'Sky conditions vary.';},
     snL(s){return s.includes('snow')||s.includes('ice')||s.includes('sleet')?'Wintry stuff incoming. Working from home is a valid life choice.':null;},
     out(sc,ab){
       if(ab.storm)return{v:'NO',r:"It's actively storming. Inside is the only correct answer."};
@@ -814,7 +814,7 @@ const T={
     fL(t,f){const d=f-t;if(d<=-10)return'LOOKS CAN BE DECEIVING. The wind is LYING to you. So much colder than it looks.';if(d<=-5)return'The wind is out here making everything worse. Classic.';if(d>=10)return'THE HUMIDITY IS MAKING A FOOL OF THAT THERMOMETER. Way stickier than it looks.';if(d>=5)return'Feels warmer than it is. The humidity is doing stuff.';return'The thermometer is being honest for once. Weird.';},
     rL(p,s){if(p>=80)return`${p}% chance. IT IS GOING TO RAIN. A LOT. You WILL get wet.`;if(p>=60)return`${p}% chance. Rain is coming for you. Your shoes will disagree.`;if(p>=40)return`${p}% chance. Could rain. Could not. The atmosphere is indecisive.`;return`${p}% chance. Probably fine. PROBABLY.`;},
     wL(w){if(w>=60)return`${w} MPH WINDS. YOUR HOUSE MIGHT HAVE OPINIONS ABOUT THIS.`;if(w>=45)return`${w} mph. YOUR UMBRELLA WILL NOT SURVIVE. Leave it home.`;if(w>=30)return`${w} mph. Your soda WILL spill. You have been warned.`;if(w>=15)return`${w} mph. Kinda breezy. Hair day is cancelled.`;return'Barely any wind. The air is just sitting there.';},
-    cL(s){if(s.includes('sunny')||s.includes('clear'))return'CLEAR SKIES!! THE SUN IS HERE AND THRIVING!!!';if(s.includes('mostly sunny')||s.includes('mostly clear'))return'Mostly clear!! Almost perfect!! Take it!!';if(s.includes('partly'))return"Some clouds, some sun. The sky literally cannot decide.";if(s.includes('mostly cloudy'))return'Mostly cloudy. The sun is trying its best.';if(s.includes('cloud')||s.includes('overcast'))return'Completely overcast. The sun took a personal day. Respect.';},
+    cL(s){if(s.includes('sunny')||s.includes('clear'))return'CLEAR SKIES!! THE SUN IS HERE AND THRIVING!!!';if(s.includes('mostly sunny')||s.includes('mostly clear'))return'Mostly clear!! Almost perfect!! Take it!!';if(s.includes('partly'))return"Some clouds, some sun. The sky literally cannot decide.";if(s.includes('mostly cloudy'))return'Mostly cloudy. The sun is trying its best.';if(s.includes('cloud')||s.includes('overcast'))return'Completely overcast. The sun took a personal day. Respect.';return'The sky is doing something. Hard to say what.';},
     snL(s){return s.includes('snow')||s.includes('ice')||s.includes('sleet')?'OK SO. IT\'S GONNA GET SLIPPERY AND COLD AND GROSS. Work may get cancelled. JUST PREPARE. OK???':null;},
     out(sc,ab){
       if(ab.storm)return{v:'NO!!!',r:"IT IS STORMING RIGHT NOW. WHY ARE YOU EVEN ASKING THIS. STAY INSIDE."};
@@ -932,7 +932,7 @@ function renderHome(){
         <div class="chip-ico">${c.ico}</div>
         <div class="chip-lbl">${c.lbl}</div>
         <div class="chip-val">${c.val}</div>
-        <div class="chip-sub">${c.sub.length>55?c.sub.slice(0,55)+'…':c.sub}</div>
+        <div class="chip-sub">${(c.sub||'').length>55?(c.sub||'').slice(0,55)+'…':(c.sub||'')}</div>
       </div>`).join('')}
     </div>
     <div class="foot">National Weather Service · Tap any card for details</div>
@@ -944,7 +944,7 @@ function openDrawer(id){
   document.getElementById('d-ico').textContent=c.ico;
   document.getElementById('d-lbl').textContent=c.lbl;
   document.getElementById('d-val').textContent=c.val;
-  document.getElementById('d-body').textContent=c.full||c.sub;
+  document.getElementById('d-body').textContent=c.full||c.sub||'No details available.';
   document.getElementById('drawer').classList.add('open');
 }
 function closeDrawer(){document.getElementById('drawer').classList.remove('open');}
