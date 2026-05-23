@@ -63,7 +63,7 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 .saved-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.1);border:1px solid var(--glass-border);border-radius:20px;padding:6px 12px;font-size:13px;cursor:pointer;transition:background 0.2s;}
 .saved-pill:hover{background:rgba(255,255,255,0.2);}
 .sp-x{color:var(--text3);font-size:11px;margin-left:2px;}
-#land-err{font-size:13px;color:var(--red);margin-top:8px;min-height:18px;}
+#land-err{font-size:13px;color:var(--red);margin-top:8px;min-height:18px;font-weight:600;text-align:center;}
 .theme-row{display:flex;gap:7px;margin-top:4px;}
 .th-dot{flex:1;height:38px;border-radius:10px;border:2px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:11px;font-weight:800;color:#fff;letter-spacing:0.05em;transition:border-color 0.2s,transform 0.15s;}
 .th-dot:hover{transform:scale(1.04);}
@@ -376,7 +376,7 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 .ld-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);animation:bdot 1.2s infinite;}
 .ld-dot:nth-child(2){animation-delay:0.2s;}.ld-dot:nth-child(3){animation-delay:0.4s;}
 @keyframes bdot{0%,80%,100%{transform:scale(0.8);opacity:0.4}40%{transform:scale(1.2);opacity:1}}
-.ld-txt{font-family:'Outfit',sans-serif;font-size:14px;color:var(--text3);}
+.ld-txt{font-family:'Outfit',sans-serif;font-size:14px;color:var(--text3);transition:opacity 0.2s;}
 .err-box{background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.28);border-radius:var(--radius);padding:22px;text-align:center;}
 .err-title{font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--red);margin-bottom:7px;}
 .err-body{font-size:13px;color:var(--text2);}
@@ -473,9 +473,9 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 
     <!-- MAIN -->
     <div class="main-col">
-      <div id="screen-home" class="screen active"><div id="home-inner"><div class="loading"><div class="ld-dots"><div class="ld-dot"></div><div class="ld-dot"></div><div class="ld-dot"></div></div><div class="ld-txt">Checking the vibes...</div></div></div></div>
-      <div id="screen-warnings" class="screen"><div id="warn-inner"><div class="loading"><div class="ld-dots"><div class="ld-dot"></div><div class="ld-dot"></div><div class="ld-dot"></div></div><div class="ld-txt">Scanning for chaos...</div></div></div></div>
-      <div id="screen-hourly" class="screen"><div id="hour-inner"><div class="loading"><div class="ld-dots"><div class="ld-dot"></div><div class="ld-dot"></div><div class="ld-dot"></div></div><div class="ld-txt">Hour by hour...</div></div></div></div>
+      <div id="screen-home" class="screen active"><div id="home-inner"><div class="loading"><div class="ld-dots"><div class="ld-dot"></div><div class="ld-dot"></div><div class="ld-dot"></div></div><div class="ld-txt" id="ld-rotating">Checking the vibes...</div></div></div></div>
+      <div id="screen-warnings" class="screen"><div id="warn-inner"></div></div>
+      <div id="screen-hourly" class="screen"><div id="hour-inner"></div></div>
       <div id="screen-future" class="screen">
         <div class="f-tabs">
           <button class="ftab active" onclick="setFTab('summary')">What's Coming</button>
@@ -531,7 +531,7 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 // ─── STATE ───────────────────────────────────────────────────
 const S = {
   lat:null,lon:null,name:'',
-  ui:'storm',tone:'terse',units:'F',sharp:false,time12:true,windMph:true,welcomed:false,
+  ui:'storm',tone:'terse',units:'F',sharp:false,time12:true,windMph:true,welcomed:false,lastFetched:null,
   saved:[],showHidden:false,
   notifs:false,dailyNotif:false,
   gridId:null,gridX:null,gridY:null,zone:null,
@@ -555,7 +555,11 @@ window.addEventListener('DOMContentLoaded',()=>{
     document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){id==='m-zip'?mZip():mCity();}});
   });
   maybeShowWelcome();
-  if(S.lat&&S.lon&&S.name) enterApp(S.lat,S.lon,S.name,false);
+  if(S.lat&&S.lon&&S.name){
+    // Start cycling the static loading message right away
+    startLoadingCycle();
+    enterApp(S.lat,S.lon,S.name,false);
+  }
 });
 
 // ─── UI THEME ────────────────────────────────────────────────
@@ -591,6 +595,12 @@ function updateAmbChip(){
   chip.style.display='flex';
 }
 function setWindMph(v){S.windMph=v;save();if(S.loaded)renderAll();}
+async function fetchT(url,opts={},ms=8000){
+  const ctrl=new AbortController();
+  const tid=setTimeout(()=>ctrl.abort(),ms);
+  try{return await fetch(url,{...opts,signal:ctrl.signal});}
+  finally{clearTimeout(tid);}
+}
 function applyUI(t){
   document.body.setAttribute('data-ui',t);
   document.querySelectorAll('.th-dot').forEach(el=>el.classList.toggle('active',el.dataset.t===t));
@@ -621,12 +631,16 @@ function switchTab(t){
   if(t==='settings')buildSettings();
   if(t==='future'){const gp=document.getElementById('fp-graph');if(gp?.classList.contains('active')&&S.loaded)renderGraphs();}
 }
+const _fRendered={};
 function setFTab(t){
   const ts=['summary','graph','full'];
   document.querySelectorAll('.ftab').forEach((b,i)=>b.classList.toggle('active',ts[i]===t));
   document.querySelectorAll('.fpanel').forEach(p=>p.classList.remove('active'));
   document.getElementById('fp-'+t)?.classList.add('active');
-  if(t==='graph'&&S.loaded)renderGraphs();
+  if(!S.loaded)return;
+  if(t==='graph'&&!_fRendered.graph){renderGraphs();_fRendered.graph=true;}
+  if(t==='full'&&!_fRendered.full){renderFutureFull();_fRendered.full=true;}
+  if(t==='summary'&&!_fRendered.summary){renderFutureSummary();_fRendered.summary=true;}
 }
 
 // ─── SAVED LOCATIONS ─────────────────────────────────────────
@@ -651,7 +665,8 @@ function saveCurrentLoc(){
 // ─── GEOCODE ─────────────────────────────────────────────────
 async function doSearch(){
   const v=(document.getElementById('l-search')?.value||'').trim();
-  if(!v)return;
+  if(!v){setErr('land-err','Enter a ZIP code or city name.');return;}
+  setErr('land-err','');
   if(/^\d{5}$/.test(v))await geocode(v+', USA','land-err');
   else await geocode(v,'land-err');
 }
@@ -671,13 +686,20 @@ function cleanLocName(addr){
   return'Your Location';
 }
 async function geocode(q,errId){
+  setErr(errId,'Searching...');
   try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=us&addressdetails=1`,{headers:{'Accept-Language':'en'}});
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=us&addressdetails=1`,{headers:{'Accept-Language':'en-US,en'}});
+    if(!r.ok)throw new Error('Search failed ('+r.status+'). Check your connection.');
     const d=await r.json();
-    if(!d.length)throw new Error('Location not found. Try a different search.');
+    if(!d.length)throw new Error('Location not found. Try a ZIP code instead.');
     const name=cleanLocName(d[0].address);
+    setErr(errId,'');
     await enterApp(parseFloat(d[0].lat),parseFloat(d[0].lon),name,false);
-  }catch(e){setErr(errId,e.message);}
+  }catch(e){
+    const msg=e.name==='TypeError'?'Network error — check your connection.':e.message;
+    setErr('land-err',msg);
+    console.error('geocode error:',e);
+  }
 }
 async function doGeo(errId){
   if(!navigator.geolocation){setErr(errId,'Geolocation not supported.');return;}
@@ -693,7 +715,7 @@ async function doGeo(errId){
     },()=>{setErr(errId,'Could not get location.');res();});
   });
 }
-function setErr(id,msg){if(!id)return;const el=document.getElementById(id);if(el)el.textContent=msg;}
+function setErr(id,msg){const el=document.getElementById(id||'land-err');if(el)el.textContent=msg;}
 
 // ─── ENTER APP ───────────────────────────────────────────────
 async function enterApp(lat,lon,name,skipFetch){
@@ -701,47 +723,87 @@ async function enterApp(lat,lon,name,skipFetch){
   document.getElementById('landing').style.display='none';
   document.getElementById('shell').style.display='block';
   document.getElementById('loc-txt').textContent=name;
-  document.getElementById('loc-sub').textContent='';
   save();
   setAllLoading();
   await fetchWeather();
 }
-function setAllLoading(){
-  const msgs=['Fetching the vibes...','Calculating the badness...','Asking the atmosphere nicely...','Interrogating the clouds...','Reading between the isobars...','Consulting the sky...','Checking if outside is safe...'];
-  const l=`<div class="loading"><div class="ld-dots"><div class="ld-dot"></div><div class="ld-dot"></div><div class="ld-dot"></div></div><div class="ld-txt" id="ld-rotating">${msgs[Math.floor(Math.random()*msgs.length)]}</div></div>`;
-  ['home-inner','warn-inner','hour-inner','fp-summary','fp-full'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=l;});
+let _ldTimer=null;
+const _ldMsgs=['Fetching the vibes...','Contacting NWS...','Calculating the badness...','Asking the atmosphere nicely...','Interrogating the clouds...','Reading between the isobars...','Consulting the sky...','Checking if outside is safe...','Yelling at weather.gov...','Almost there...'];
+let _ldMi=0;
+function startLoadingCycle(){
+  clearInterval(_ldTimer);
+  _ldMi=Math.floor(Math.random()*_ldMsgs.length);
+  _ldTimer=setInterval(()=>{
+    const el=document.getElementById('ld-rotating');
+    if(!el){clearInterval(_ldTimer);return;}
+    _ldMi=(_ldMi+1)%_ldMsgs.length;
+    el.style.opacity='0';
+    setTimeout(()=>{if(el){el.textContent=_ldMsgs[_ldMi];el.style.opacity='1';}},200);
+  },2200);
 }
+function setAllLoading(){
+  const l=`<div class="loading"><div class="ld-dots"><div class="ld-dot"></div><div class="ld-dot"></div><div class="ld-dot"></div></div><div class="ld-txt" id="ld-rotating">${_ldMsgs[_ldMi]}</div></div>`;
+  const el=document.getElementById('home-inner');if(el)el.innerHTML=l;
+  startLoadingCycle();
+}
+function stopLoading(){clearInterval(_ldTimer);_ldTimer=null;}
 async function fetchWeather(){
   try{
-    const pt=await fetch(`https://api.weather.gov/points/${S.lat.toFixed(4)},${S.lon.toFixed(4)}`,{headers:{'User-Agent':'TerseWeather/2.0'}});
-    if(!pt.ok)throw new Error('NWS cannot find this location. NWS only covers the US — try a different city.');
+    const _setLdMsg=m=>{const el=document.getElementById('ld-rotating');if(el){el.style.opacity='0';setTimeout(()=>{if(el){el.textContent=m;el.style.opacity='1';}},150);}};
+    _setLdMsg('Contacting NWS...');
+    console.log('fetchWeather start',S.lat,S.lon);
+    const pt=await fetchT(`https://api.weather.gov/points/${S.lat.toFixed(4)},${S.lon.toFixed(4)}`,{},20000);
+    console.log('points response',pt.status,pt.ok);
+    if(!pt.ok){
+      const body=await pt.text().catch(()=>'');
+      throw new Error(`NWS error ${pt.status}: ${body.slice(0,120)}`);
+    }
     const p=(await pt.json()).properties;
+    _setLdMsg('Fetching forecast data...');
     S.gridId=p.gridId;S.gridX=p.gridX;S.gridY=p.gridY;
     // Store BOTH zone IDs — tornado warnings often come on county zone, not forecast zone
     S.forecastZone=p.forecastZone?.split('/').pop()||null;
     S.countyZone=p.county?.split('/').pop()||null;
     S.zone=S.forecastZone||S.countyZone;
     // Update location subtext with zone info
-    const _locSub=document.getElementById('loc-sub');
-    if(_locSub&&S.forecastZone){
-      const _cz=S.countyZone?(' · '+S.countyZone):'';
-      _locSub.textContent=S.forecastZone+_cz;
-    }
 
+
+    const HA={};
     const[fc,hr,alFZ,alCZ,gr]=await Promise.allSettled([
-      fetch(`https://api.weather.gov/gridpoints/${S.gridId}/${S.gridX},${S.gridY}/forecast`,{headers:{'User-Agent':'TerseWeather/2.0'}}),
-      fetch(`https://api.weather.gov/gridpoints/${S.gridId}/${S.gridX},${S.gridY}/forecast/hourly`,{headers:{'User-Agent':'TerseWeather/2.0'}}),
-      S.forecastZone?fetch(`https://api.weather.gov/alerts/active?zone=${S.forecastZone}`,{headers:{'User-Agent':'TerseWeather/2.0'}}):Promise.resolve(null),
-      S.countyZone?fetch(`https://api.weather.gov/alerts/active?zone=${S.countyZone}`,{headers:{'User-Agent':'TerseWeather/2.0'}}):Promise.resolve(null),
-      fetch(`https://api.weather.gov/gridpoints/${S.gridId}/${S.gridX},${S.gridY}`,{headers:{'User-Agent':'TerseWeather/2.0'}}),
+      fetchT(`https://api.weather.gov/gridpoints/${S.gridId}/${S.gridX},${S.gridY}/forecast`,{headers:HA}),
+      fetchT(`https://api.weather.gov/gridpoints/${S.gridId}/${S.gridX},${S.gridY}/forecast/hourly`,{headers:HA}),
+      S.forecastZone?fetchT(`https://api.weather.gov/alerts/active?zone=${S.forecastZone}`,{headers:HA},6000):Promise.resolve(null),
+      S.countyZone?fetchT(`https://api.weather.gov/alerts/active?zone=${S.countyZone}`,{headers:HA},6000):Promise.resolve(null),
+      fetchT(`https://api.weather.gov/gridpoints/${S.gridId}/${S.gridX},${S.gridY}`,{headers:HA},12000),
     ]);
-    if(fc.status==='fulfilled'&&fc.value.ok)S.forecast=(await fc.value.json()).properties;
-    if(hr.status==='fulfilled'&&hr.value.ok)S.hourly=(await hr.value.json()).properties;
-    if(gr.status==='fulfilled'&&gr.value.ok)S.gridRaw=(await gr.value.json()).properties;
-
-    // Merge alerts from BOTH zones, deduplicate by alert ID — never drop any alert
-    const alertsA=alFZ.status==='fulfilled'&&alFZ.value?.ok?(await alFZ.value.json()).features||[]:[];
-    const alertsB=alCZ.status==='fulfilled'&&alCZ.value?.ok?(await alCZ.value.json()).features||[]:[];
+    // Parse all JSON in parallel
+    _setLdMsg('Crunching the numbers...');
+    const[fcJ,hrJ,alAJ,alBJ,grJ]=await Promise.allSettled([
+      fc.status==='fulfilled'&&fc.value.ok?fc.value.json():Promise.resolve(null),
+      hr.status==='fulfilled'&&hr.value.ok?hr.value.json():Promise.resolve(null),
+      alFZ.status==='fulfilled'&&alFZ.value?.ok?alFZ.value.json():Promise.resolve(null),
+      alCZ.status==='fulfilled'&&alCZ.value?.ok?alCZ.value.json():Promise.resolve(null),
+      gr.status==='fulfilled'&&gr.value.ok?gr.value.json():Promise.resolve(null),
+    ]);
+    if(fcJ.value)S.forecast=fcJ.value.properties;
+    if(hrJ.value)S.hourly=hrJ.value.properties;
+    // gridRaw: only keep the fields we actually use — drop everything else to avoid lag
+    if(grJ.value){
+      const gp=grJ.value.properties;
+      S.gridRaw={
+        pressure:gp.pressure,
+        apparentTemperature:gp.apparentTemperature,
+        dewpoint:gp.dewpoint,
+        windGust:gp.windGust,
+        windDirection:gp.windDirection,
+        skyCover:gp.skyCover,
+        visibility:gp.visibility,
+        snowfallAmount:gp.snowfallAmount,
+        iceAccumulation:gp.iceAccumulation,
+      };
+    }
+    const alertsA=alAJ.value?.features||[];
+    const alertsB=alBJ.value?.features||[];
     const seen=new Set();
     S.alerts=[...alertsA,...alertsB].filter(a=>{
       const id=a.id||a.properties?.id||JSON.stringify(a.properties?.event)+a.properties?.onset;
@@ -771,9 +833,15 @@ async function fetchWeather(){
     S.alerts.sort((a,b)=>alertRank(b.properties?.event)-alertRank(a.properties?.event));
 
     S.loaded=true;
+    S.lastFetched=Date.now();
+    Object.keys(_fRendered).forEach(k=>delete _fRendered[k]);
     renderAll();
   }catch(e){
-    document.getElementById('home-inner').innerHTML=`<div class="err-box"><div class="err-title">Couldn't load weather</div><div class="err-body">${e.message}</div></div>`;
+    stopLoading();
+    console.error('fetchWeather caught:',e.name,e.message,e);
+    const isTimeout=e.name==='AbortError';
+    const msg=isTimeout?'Request timed out. Tap Try Again.':e.message||String(e);
+    document.getElementById('home-inner').innerHTML=`<div class="err-box"><div class="err-title">Couldn't load weather</div><div class="err-body">${msg}</div><div style="margin-top:12px"><button onclick="doRefresh()" style="background:var(--accent);border:none;border-radius:10px;padding:10px 20px;font-family:'Outfit',sans-serif;font-weight:800;font-size:14px;cursor:pointer;color:#000">Try Again</button></div></div>`;
   }
 }
 async function doRefresh(){
@@ -973,16 +1041,20 @@ function toggleBMBreakdown(btn){
 
 // ─── RENDER ALL ───────────────────────────────────────────────
 function renderAll(){
+  stopLoading();
+  // Render home tab immediately — user sees it first
   renderHome();
   renderWarnings();
-  renderHourly();
-  renderFutureSummary();
-  renderFutureFull();
-  const {score:sc}=calcBad();
-  const sb=document.getElementById('sb-meter');if(sb)sb.style.display='block';
-  const sbs=document.getElementById('sb-score');if(sbs)sbs.textContent=sc+'%';
-  const sbf=document.getElementById('sb-fill');if(sbf){sbf.style.width=sc+'%';sbf.style.backgroundColor=badCol(sc);}
-  const sbv=document.getElementById('sb-vibe');if(sbv)sbv.textContent=badLbl(sc);
+  // Defer heavy tabs so home renders without jank
+  setTimeout(()=>{
+    renderHourly();
+    const {score:sc}=calcBad();
+    const sb=document.getElementById('sb-meter');if(sb)sb.style.display='block';
+    const sbs=document.getElementById('sb-score');if(sbs)sbs.textContent=sc+'%';
+    const sbf=document.getElementById('sb-fill');if(sbf){sbf.style.width=sc+'%';sbf.style.backgroundColor=badCol(sc);}
+    const sbv=document.getElementById('sb-vibe');if(sbv)sbv.textContent=badLbl(sc);
+  },0);
+  setTimeout(()=>{renderFutureSummary();_fRendered.summary=true;Object.assign(_fRendered,{graph:false,full:false});},50);
 }
 
 // ─── HOME ─────────────────────────────────────────────────────
