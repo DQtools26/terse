@@ -892,9 +892,15 @@ function isActivelyBad(){
   const p=S.hourly?.periods?.[0];
   if(!p)return{rain:false,storm:false,snow:false};
   const sf=sh(p).toLowerCase();
-  const rain=sf.includes('rain')||sf.includes('shower')||sf.includes('drizzle')||sf.includes('precipitation');
-  const storm=sf.includes('thunder')||sf.includes('tornado')||sf.includes('t-storm');
-  const snow=sf.includes('snow')||sf.includes('sleet')||sf.includes('blizzard')||sf.includes('ice pellet');
+  const pf=prec(p);
+  // "Slight chance" or "chance" = possibility, not active. Require likely/high% for active flags.
+  const _slightOrChance=sf.includes('slight chance')||sf.includes('chance');
+  const rain=(sf.includes('rain')||sf.includes('shower')||sf.includes('drizzle'))&&(!_slightOrChance||pf>=50);
+  const _thunder=sf.includes('thunder')||sf.includes('t-storm');
+  const _tornado=sf.includes('tornado');
+  // Active storm = tornado always, OR thunder + (likely/high% OR no chance qualifier)
+  const storm=_tornado||(_thunder&&(!_slightOrChance||pf>=60));
+  const snow=(sf.includes('snow')||sf.includes('sleet')||sf.includes('blizzard')||sf.includes('ice pellet'))&&(!_slightOrChance||pf>=40);
   return{rain,storm,snow};
 }
 // Returns {score, lines} — lines is the breakdown for the UI
@@ -965,19 +971,35 @@ function calcBad(){
     else if(sf.includes('fog')){condScore+=6;lines.push({ico:'🌫️',label:'Fog',pts:'+6',type:'cond'});}
   }
 
-  const noAlertScore=condScore+alertBonus;
+  // Active conditions boost — what's happening RIGHT NOW matters more than forecast
+  const _abNow=isActivelyBad();
+  const _sfNow=p?sh(p).toLowerCase():'';
+  let activeBoost=0;
+  if(_abNow.storm&&!_sfNow.includes('tornado')){
+    // Actively storming but no tornado warning — boost to at least 45
+    activeBoost=Math.max(0,45-(condScore+alertBonus+alertFloor));
+    if(activeBoost>0)lines.push({ico:'⛈️',label:'Active storm conditions NOW',pts:'+'+activeBoost,type:'floor'});
+  } else if(_abNow.rain){
+    activeBoost=Math.max(0,20-(condScore+alertBonus));
+    if(activeBoost>0)lines.push({ico:'🌧️',label:'Raining right now',pts:'+'+activeBoost,type:'cond'});
+  } else if(_abNow.snow){
+    activeBoost=Math.max(0,30-(condScore+alertBonus+alertFloor));
+    if(activeBoost>0)lines.push({ico:'❄️',label:'Snow/ice falling now',pts:'+'+activeBoost,type:'floor'});
+  }
+
+  const noAlertScore=condScore+alertBonus+activeBoost;
   const final=alertFloor>0
-    ? Math.max(alertFloor, Math.min(alertFloor+condScore*0.3+alertBonus*0.4, 100))
+    ? Math.max(alertFloor+activeBoost, Math.min(alertFloor+condScore*0.3+alertBonus*0.4+activeBoost, 100))
     : Math.min(noAlertScore, 100);
   const score=Math.round(final);
 
   // If nothing contributed, say so
   if(!lines.length)lines.push({ico:'✅',label:'No significant factors',pts:'',type:'none'});
 
-  return{score,lines};
+  return{score,lines,activeBoost};
 }
 function badCol(s){if(s<=12)return'#4ade80';if(s<=30)return'#a3e635';if(s<=52)return'#fbbf24';if(s<=72)return'#fb923c';return'#f87171';}
-function badLbl(s){if(s<=6)return'All clear';if(s<=18)return'Pretty calm';if(s<=32)return'Minor stuff';if(s<=50)return'Worth watching';if(s<=65)return'Getting dicey';if(s<=80)return'Not great';if(s<=92)return'Dangerous';return'TAKE SHELTER';}
+function badLbl(s){if(s<=6)return'All clear';if(s<=18)return'Pretty calm';if(s<=32)return'Minor stuff';if(s<=44)return'Worth watching';if(s<=60)return'Getting dicey';if(s<=75)return'Not great';if(s<=90)return'Dangerous';return'TAKE SHELTER';}
 
 // ─── TONE ENGINE ─────────────────────────────────────────────
 const T={
@@ -1124,7 +1146,25 @@ function renderHome(){
     {id:'fog',ico:'🌫️',lbl:'Visibility',val:_vis!=null?_vis+' mi':(sf.includes('fog')?'Reduced':'Clear'),sub:_vis!=null?(_vis<=0.25?'Near-zero visibility. Extremely dangerous.':_vis<=1?'Very low visibility. Drive with extreme caution.':_vis<=3?'Reduced visibility. Use low beams.':_vis<=5?'Somewhat reduced visibility.':'Visibility is good.'):(sf.includes('fog')?'Fog reducing visibility.':'Visibility is clear.'),full:_vis!=null?`Visibility: ${_vis} miles. ${_vis<=1?'Dangerous driving conditions.':_vis<=5?'Reduced visibility in effect.':'No visibility issues.'}`:( sf.includes('fog')?'Fog is reducing visibility. If you must drive, slow down and use low beams.':'Visibility is clear. No issues expected.'),level:_vis!=null?(_vis<=1?'danger':_vis<=5?'warn':'ok'):(sf.includes('fog')?'warn':'ok'),autoHide:_vis!=null?_vis>7:!sf.includes('fog')},
     {id:'snow',ico:'❄️',lbl:'Snow / Ice',val:_snowAmt?_snowAmt+'"':_iceAmt?_iceAmt+'" ice':(sn?'Expected':'None'),sub:_snowAmt?`${_snowAmt} inches of snow expected.`:_iceAmt?`${_iceAmt} inches of ice accumulation.`:(sn||'No wintry precipitation.'),full:_snowAmt?`${_snowAmt} inches of snowfall expected. Roads will be impacted.`:_iceAmt?`${_iceAmt} inches of ice accumulation. Extremely dangerous.`:(sn||'No snow, ice, or sleet expected right now.'),level:(_snowAmt||_iceAmt||sn)?'danger':'none',autoHide:!_snowAmt&&!_iceAmt&&!sn},
     {id:'alerts',ico:'⚠️',lbl:'Active Alerts',val:(S.alerts||[]).length||'None',sub:(S.alerts||[]).length?'Tap Alerts tab for details.':'No active NWS alerts.',full:(S.alerts||[]).length?`There are ${S.alerts.length} active NWS alert(s). Tap the Alerts tab.`:'No active National Weather Service alerts for your area.',level:(S.alerts||[]).length?'danger':'ok'},
-    {id:'kit',ico:'🎒',lbl:'What You Need',val:sc>=50?'Prep up':"You're good",sub:t.kit(sc,pf,wf,sn),full:t.kit(sc,pf,wf,sn),level:sc>=65?'danger':sc>=35?'warn':'ok'},
+    (()=>{
+      let kitVal,kitTxt;
+      if(ab.storm){
+        kitVal='Stay inside';
+        const sk={calm:'Stay indoors until the storm passes. Monitor alerts.',terse:'Stay inside. Nothing else matters right now.',unhinged:'SIT DOWN. STAY INSIDE. The outside world is hostile.'};
+        kitTxt=sk[S.tone]||sk.terse;
+      } else if(ab.rain){
+        kitVal='Umbrella';
+        const rk={calm:'Bring an umbrella and waterproof shoes.',terse:'Umbrella. Waterproof shoes. Go.',unhinged:'UMBRELLA. NOW. Your shoes will thank you later.'};
+        kitTxt=rk[S.tone]||rk.terse;
+      } else if(ab.snow){
+        kitVal='Winter gear';
+        kitTxt='Warm layers, boots, and watch for ice.';
+      } else {
+        kitVal=sc>=50?'Prep up':"You're good";
+        kitTxt=t.kit(sc,pf,wf,sn);
+      }
+      return{id:'kit',ico:'🎒',lbl:'What You Need',val:kitVal,sub:kitTxt,full:kitTxt,level:ab.storm?'danger':ab.rain||ab.snow?'warn':sc>=65?'danger':sc>=35?'warn':'ok'};
+    })(),
     {id:'pressure',ico:'📊',lbl:'Pressure',val:_gr.pressure?.values?.[0]?.value?Math.round(_gr.pressure.values[0].value)+' hPa':'—',sub:_gr.pressure?.values?.[0]?.value?(_gr.pressure.values[0].value<1000?'Low — storm system possible':_gr.pressure.values[0].value>1020?'High — stable and clear':'Normal pressure'):'Pressure data unavailable.',full:_gr.pressure?.values?.[0]?.value?`Barometric pressure: ${Math.round(_gr.pressure.values[0].value)} hPa. ${_gr.pressure.values[0].value<1000?'Low pressure often means incoming storms.':_gr.pressure.values[0].value>1020?'High pressure typically means clear, calm weather.':'Pressure is in the normal range.'}`:'Barometric pressure unavailable.',level:_gr.pressure?.values?.[0]?.value?(_gr.pressure.values[0].value<1000?'warn':'ok'):'none',autoHide:!_gr.pressure?.values?.[0]?.value},
     {id:'dew',ico:'💧',lbl:'Dew Point',val:_dew!=null?fmt(_dew):'—',sub:_dew!=null?(_dew>=70?'Very humid. Sticky and uncomfortable.':_dew>=60?'Humid. You will notice it.':_dew>=50?'Somewhat humid.':_dew>=32?'Comfortable dew point.':'Dry air.'):'Dew point unavailable.',full:_dew!=null?`Dew point: ${fmt(_dew)}. ${_dew>=70?'High humidity — sweat will not evaporate well. Feels hotter.':_dew>=60?'Noticeable humidity. Outdoor activity will feel harder.':_dew>=50?'Moderate humidity.':_dew>=32?'Comfortable humidity levels.':'Low humidity. Air is dry — skin and sinuses may notice.'}`:'Dew point data unavailable from NWS.',level:_dew!=null?(_dew>=70?'warn':'ok'):'none',autoHide:_dew==null||(_dew<60&&_dew>32)},
     {id:'skycover',ico:'🌥️',lbl:'Cloud Cover',val:_sky!=null?_sky+'%':'—',sub:_sky!=null?(_sky>=90?'Overcast. Completely cloud-covered.':_sky>=70?'Mostly cloudy.':_sky>=40?'Partly cloudy.':_sky>=10?'Mostly clear.':'Clear skies.'):'Cloud cover unavailable.',full:_sky!=null?`Sky coverage: ${_sky}%. ${_sky>=90?'Complete overcast.':_sky>=70?'Heavy cloud cover.':_sky>=40?'Scattered clouds.':_sky>=10?'Mostly clear with some clouds.':'Clear skies.'}`:'Sky cover data unavailable.',level:'ok',autoHide:_sky==null},
@@ -1175,7 +1215,7 @@ function renderHome(){
       <div class="out-q">Should I go outside?</div>
       <div class="out-verdict" style="color:${sc<=25?'var(--green)':sc<=50?'var(--yellow)':'var(--red)'}">${out.v}</div>
       <div class="out-reason">${out.r}</div>
-      ${ir!=='low'?`<div class="out-ir out-ir-${ir}">${ir==='high'?'⛈️ Storm likely later today':'🌦️ Isolated storm chance later'}</div>`:''}
+      ${ir!=='low'&&!ab.storm?`<div class="out-ir out-ir-${ir}">${ir==='high'?'⛈️ Storm likely later today':'🌦️ Isolated storm chance later'}</div>`:''}
     </div>
     <div class="chips-hdr">
       <div class="chips-lbl">Right Now — ${wIco(sh(cur))} ${sh(cur).slice(0,26)}</div>
