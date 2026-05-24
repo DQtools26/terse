@@ -208,6 +208,9 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 .out-q{font-family:'Outfit',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;}
 .out-verdict{font-family:'Outfit',sans-serif;font-size:34px;font-weight:900;letter-spacing:-1px;line-height:1;}
 .out-reason{font-size:13px;color:var(--text2);margin-top:5px;}
+.out-ir{margin-top:10px;padding:6px 10px;border-radius:8px;font-size:12px;font-weight:600;}
+.out-ir-moderate{background:rgba(251,191,36,0.15);color:var(--yellow);}
+.out-ir-high{background:rgba(248,113,113,0.15);color:var(--red);}
 
 .chips-hdr{display:flex;align-items:center;justify-content:space-between;margin:8px 0 10px;}
 .chips-lbl{font-family:'Outfit',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);}
@@ -980,15 +983,17 @@ function badLbl(s){if(s<=6)return'All clear';if(s<=18)return'Pretty calm';if(s<=
 const T={
   calm:{
     tL(t){if(t>=100)return'Extreme heat. Stay inside and hydrated.';if(t>=90)return'Very hot. Drink plenty of water.';if(t>=80)return'Warm and comfortable.';if(t>=70)return'Pleasant temperature.';if(t>=60)return'Mild. A light jacket may help.';if(t>=50)return'Cool. A jacket recommended.';if(t>=32)return'Cold. Dress in layers.';if(t>=10)return'Very cold. Bundle up completely.';return'Dangerously cold. Limit time outdoors.';},
-    fL(t,f){const d=f-t;if(d<=-10)return'Much colder than it looks due to wind chill.';if(d<=-5)return'Feels cooler due to wind.';if(d>=10)return'Humidity makes it feel hotter.';if(d>=5)return'Slightly warmer than the thermometer reads.';return'Feels close to the actual temperature.';},
+    fL(t,f){const d=f-t;if(d<=-10)return t<50?'Wind chill makes it feel much colder.':'Feels noticeably cooler than the temperature.';if(d<=-5)return'Feels a bit cooler than the temperature.';if(d>=10)return'Humidity makes it feel hotter.';if(d>=5)return'Slightly warmer than the thermometer reads.';return'Feels close to the actual temperature.';},
     rL(p,s){if(p>=80)return`${p}% chance — rain is very likely. Carry an umbrella.`;if(p>=50)return`${p}% chance. An umbrella is a good idea.`;if(p>=30)return`${p}% chance. You may want an umbrella.`;return`${p}% chance. Rain is unlikely today.`;},
     wL(w){if(w>=50)return`Very strong winds at ${w} mph. Use caution.`;if(w>=35)return`Strong winds at ${w} mph.`;if(w>=20)return`Breezy at ${w} mph.`;if(w>=10)return`Light wind at ${w} mph.`;return'Calm winds.';},
     cL(s){if(s.includes('sunny')||s.includes('clear'))return'Clear and sunny today.';if(s.includes('mostly sunny')||s.includes('mostly clear'))return'Mostly sunny with some clouds.';if(s.includes('partly'))return'Partly cloudy skies.';if(s.includes('mostly cloudy'))return'Mostly cloudy.';if(s.includes('cloud')||s.includes('overcast'))return'Cloudy skies today.';return'Mixed sky conditions.';},
     snL(s){return s.includes('snow')||s.includes('ice')||s.includes('sleet')?'Wintry precipitation expected. Drive carefully.':null;},
-    out(sc,ab){
+    out(sc,ab,ir){
       if(ab.storm)return{v:'NO',r:'It is actively storming right now. Stay inside.'};
       if(ab.snow)return{v:'NO',r:'Wintry precipitation is falling. Roads may be slippery.'};
       if(ab.rain)return{v:'MAYBE',r:'It is currently raining. Bring an umbrella if you go out.'};
+      if(ir==='high')return{v:'MAYBE',r:'Conditions are fine right now, but storms are likely later today. Plan around it.'};
+      if(ir==='moderate')return{v:'YES',r:'Currently clear. Isolated storm chance this afternoon — keep an eye on radar.'};
       if(sc<=25)return{v:'YES',r:'Conditions are comfortable and safe.'};
       if(sc<=50)return{v:'MAYBE',r:'Some weather to watch. Check the details.'};
       return{v:'NO',r:'Conditions make outdoor activity inadvisable.'};},
@@ -997,15 +1002,17 @@ const T={
   },
   terse:{
     tL(t){if(t>=100)return'Truly evil heat. Hydrate, seriously.';if(t>=90)return'Hot. The sun is not your friend.';if(t>=80)return'Warm. Great excuse for something cold.';if(t>=70)return'Pretty nice, honestly.';if(t>=60)return'Mild. Could be worse.';if(t>=50)return'Getting chilly. Jacket time.';if(t>=32)return'Cold. Layers, not optional.';if(t>=10)return'Real winter hours out there.';return'Dangerously cold. Stay inside.';},
-    fL(t,f){const d=f-t;if(d<=-10)return'Looks can be deceiving. Wind makes it much colder.';if(d<=-5)return'Wind chill is doing its thing.';if(d>=10)return'Humidity is making a fool of that thermometer.';if(d>=5)return'Feels stickier than it looks.';return'What you see is what you get.';},
+    fL(t,f){const d=f-t;if(d<=-10)return t<50?'Wind chill is brutal right now.':'Feels much colder than it looks.';if(d<=-5)return t<50?'Wind chill is doing its thing.':'Cooler than the number suggests.';if(d>=10)return'Humidity is making a fool of that thermometer.';if(d>=5)return'Feels stickier than it looks.';return'What you see is what you get.';},
     rL(p,s){if(p>=80)return`${p}% chance. It's going to rain. Accept it.`;if(p>=50)return`${p}% chance. Umbrella probably wise.`;if(p>=30)return`${p}% chance. Maybe bring one.`;return`${p}% chance. Probably fine.`;},
     wL(w){if(w>=50)return`${w} mph. Your umbrella will not survive this.`;if(w>=35)return`${w} mph. Genuinely windy. Hold your stuff.`;if(w>=20)return`${w} mph. Breezy. Hair day: cancelled.`;if(w>=10)return`${w} mph. A gentle breeze.`;return'Basically still out there.';},
-    cL(s){if(s.includes('sunny')||s.includes('clear'))return'Clear! The sky is doing great.';if(s.includes('mostly sunny')||s.includes('mostly clear'))return'Mostly sunny. Almost perfect.';if(s.includes('partly'))return"Some clouds, some sun. The sky can't commit.";if(s.includes('mostly cloudy'))return'Mostly cloudy. Sun is trying.';if(s.includes('cloud')||s.includes('overcast'))return'Overcast. The sun called in sick.';return'Sky conditions vary.';},
+    cL(s){if(s.includes('sunny')||s.includes('clear'))return'Mostly clear skies.';if(s.includes('mostly sunny')||s.includes('mostly clear'))return'Mostly sunny with some clouds.';if(s.includes('partly'))return"Partly cloudy.";if(s.includes('mostly cloudy'))return'Mostly cloudy.';if(s.includes('cloud')||s.includes('overcast'))return'Overcast.';return'Mixed sky conditions.';},
     snL(s){return s.includes('snow')||s.includes('ice')||s.includes('sleet')?'Wintry stuff incoming. Working from home is a valid life choice.':null;},
-    out(sc,ab){
+    out(sc,ab,ir){
       if(ab.storm)return{v:'NO',r:"It's actively storming. Inside is the only correct answer."};
       if(ab.snow)return{v:'NO',r:'Snow or sleet is falling right now. Tread carefully if you must go.'};
       if(ab.rain)return{v:'MAYBE',r:"It's raining right now. Umbrella is not optional."};
+      if(ir==='high')return{v:'PROBABLY',r:'Fine now. Storms likely this afternoon — have a plan.'};
+      if(ir==='moderate')return{v:'YES',r:'Clear now. Isolated storm chance later. Keep an eye out.'};
       if(sc<=25)return{v:'YES',r:'Go. Enjoy it. No excuses.'};
       if(sc<=50)return{v:'MAYBE',r:"Could be fine, could be annoying. You'll manage."};
       return{v:'NO',r:"The weather has opinions. Unpleasant ones. Stay in."};},
@@ -1014,15 +1021,17 @@ const T={
   },
   unhinged:{
     tL(t){if(t>=100)return'THE SUN IS PERSONALLY ATTACKING YOU. HYDRATE. NOW. PLEASE.';if(t>=95)return'Physically painful heat. Please hydrate. Please send this weather elsewhere.';if(t>=90)return'Hot!! Your sweat has sweat. A/C is your best friend today.';if(t>=80)return'Warm! Good day to sweat through your shirt!';if(t>=70)return'This is genuinely pleasant??? Wild.';if(t>=60)return'Mild! Could stay outside forever probably.';if(t>=50)return'A little chilly. Your body is alerting you. Listen to it.';if(t>=32)return'COLD. ALL THE LAYERS. EVERY SINGLE ONE.';if(t>=10)return'Oh no. Oh no no no. This is real winter.';return'DANGEROUSLY COLD. Stay inside. Your extremities will thank you.';},
-    fL(t,f){const d=f-t;if(d<=-10)return'LOOKS CAN BE DECEIVING. The wind is LYING to you. So much colder than it looks.';if(d<=-5)return'The wind is out here making everything worse. Classic.';if(d>=10)return'THE HUMIDITY IS MAKING A FOOL OF THAT THERMOMETER. Way stickier than it looks.';if(d>=5)return'Feels warmer than it is. The humidity is doing stuff.';return'The thermometer is being honest for once. Weird.';},
+    fL(t,f){const d=f-t;if(d<=-10)return t<50?'WIND CHILL IS LYING TO YOU. So much colder than it looks.':'Feels WAY colder than the number says. Suspicious.';if(d<=-5)return t<50?'The wind is out here making everything worse. Classic.':'Feels colder than advertised.';if(d>=10)return'THE HUMIDITY IS MAKING A FOOL OF THAT THERMOMETER. Way stickier than it looks.';if(d>=5)return'Feels warmer than it is. The humidity is doing stuff.';return'The thermometer is being honest for once. Weird.';},
     rL(p,s){const active=s.includes('rain')||s.includes('shower')||s.includes('drizzle');if(active&&p>=70)return"IT IS RAINING RIGHT NOW. You will get wet. UMBRELLA. GO.";if(active)return'Precipitation is happening out there. Your future self says bring a jacket.';if(p>=90)return`${p}% chance. IT IS GOING TO RAIN. This is not a drill. UMBRELLA.`;if(p>=70)return`${p}% chance. Rain is coming for you. Your shoes will disagree.`;if(p>=50)return`${p}% chance. It might rain. It probably will. Take the umbrella.`;if(p>=30)return`${p}% chance. Could rain. Could not. The atmosphere is indecisive.`;if(p>=10)return`${p}% chance. Probably fine. PROBABLY.`;return'No rain expected!! The sky is being cooperative!! Celebrate!!';},
     wL(w){if(w>=60)return`${w} MPH WINDS. YOUR HOUSE MIGHT HAVE OPINIONS ABOUT THIS.`;if(w>=45)return`${w} mph. YOUR UMBRELLA WILL NOT SURVIVE. Leave it home.`;if(w>=30)return`${w} mph. Your soda WILL spill. You have been warned.`;if(w>=15)return`${w} mph. Kinda breezy. Hair day is cancelled.`;return'Barely any wind. The air is just sitting there.';},
     cL(s){if(s.includes('sunny')||s.includes('clear'))return'CLEAR SKIES!! THE SUN IS HERE AND THRIVING!!!';if(s.includes('mostly sunny')||s.includes('mostly clear'))return'Mostly clear!! Almost perfect!! Take it!!';if(s.includes('partly'))return"Some clouds, some sun. The sky literally cannot decide.";if(s.includes('mostly cloudy'))return'Mostly cloudy. The sun is trying its best.';if(s.includes('cloud')||s.includes('overcast'))return'Completely overcast. The sun took a personal day. Respect.';return'The sky is doing something. Hard to say what.';},
     snL(s){return s.includes('snow')||s.includes('ice')||s.includes('sleet')?'OK SO. IT\'S GONNA GET SLIPPERY AND COLD AND GROSS. Work may get cancelled. JUST PREPARE. OK???':null;},
-    out(sc,ab){
+    out(sc,ab,ir){
       if(ab.storm)return{v:'NO!!!',r:"IT IS STORMING RIGHT NOW. WHY ARE YOU EVEN ASKING THIS. STAY INSIDE."};
       if(ab.snow)return{v:'NO',r:'Snow or sleet is falling RIGHT NOW. Outside is hostile territory.'};
       if(ab.rain)return{v:'MAYBE?',r:"It's raining RIGHT NOW. If you go out you WILL get wet. Take the umbrella."};
+      if(ir==='high')return{v:'MAYBE?',r:'Fine RIGHT NOW but storms are COMING this afternoon. The sky is lying to you. Have a plan.'};
+      if(ir==='moderate')return{v:'YES?',r:'Currently fine!! Scattered storm chance later. Classic atmosphere deception. Go but watch radar.'};
       if(sc<=25)return{v:'YES!!!',r:"GET OUT THERE. What are you waiting for?? Go touch grass."};
       if(sc<=40)return{v:'SURE?',r:"Probably fine. Check the alerts first. You've got this. Maybe."};
       if(sc<=65)return{v:'MAYBE NOT',r:"The weather has unpleasant opinions. Proceed with caution."};
@@ -1068,12 +1077,22 @@ function renderHome(){
   const ab=isActivelyBad();
   // gridRaw extractions (must be before feels-like)
   const _gr=S.gridRaw||{};
-  // Use NWS apparentTemperature if available, fall back to homebrew
+  // Use NWS apparentTemperature if available, sanity-checked
   let feels=tf;
   const _appTemp=_gr.apparentTemperature?.values?.[0]?.value;
-  if(_appTemp!=null){feels=Math.round(_appTemp*9/5+32);}
-  else if(hf!==null&&tf>80){feels=tf+(hf-50)*0.2;}
-  else if(wf>10&&tf<50){feels=tf-wf*0.5;}
+  if(_appTemp!=null){
+    const _appF=Math.round(_appTemp*9/5+32);
+    // Sanity check: apparent temp shouldn't deviate >25°F from actual
+    if(Math.abs(_appF-tf)<=25)feels=_appF;
+    else feels=tf; // gridRaw timestamp mismatch — fall back
+  }
+  // Fallback: only apply heat index above 80°F, wind chill below 50°F
+  if(feels===tf){
+    if(tf>=80&&hf!==null)feels=Math.round(tf+(hf-40)*0.15);
+    else if(tf<50&&wf>=3)feels=Math.round(tf-Math.pow(wf,0.16)*5+22);
+  }
+  // Never let feels deviate more than 20°F from actual in either direction
+  feels=Math.max(tf-20,Math.min(tf+20,feels));
   const _gust=(()=>{const v=_gr.windGust?.values?.[0]?.value;return v?Math.round(v*2.237):null;})();
   const _dew=(()=>{const v=_gr.dewpoint?.values?.[0]?.value;return v?Math.round(v*9/5+32):null;})();
   const _sky=(()=>{const v=_gr.skyCover?.values?.[0]?.value;return v!=null?Math.round(v):null;})();
@@ -1082,7 +1101,12 @@ function renderHome(){
   const _snowAmt=(()=>{const v=_gr.snowfallAmount?.values?.[0]?.value;return v?Math.round(v*0.0393701*10)/10:null;})();
   const _iceAmt=(()=>{const v=_gr.iceAccumulation?.values?.[0]?.value;return v?Math.round(v*0.0393701*100)/100:null;})();
   const sn=t.snL(sf);
-  const out=t.out(sc,ab);
+  // Interruption risk: scan next 12 hourly periods for storm chance
+  const _hrPs=S.hourly?.periods?.slice(0,12)||[];
+  const _stormHrs=_hrPs.filter(p=>sh(p).toLowerCase().includes('thunder')||sh(p).toLowerCase().includes('tornado'));
+  const _maxHrPrec=Math.max(..._hrPs.map(p=>prec(p)),0);
+  const ir=_stormHrs.length>=4||_maxHrPrec>=70?'high':_stormHrs.length>=2||_maxHrPrec>=40?'moderate':'low';
+  const out=t.out(sc,ab,ir);
   // NOW STRIP
   const _nIco=(()=>{if(ab.storm)return'⛈️';if(ab.snow)return'❄️';if(ab.rain)return'🌧️';if(sf.includes('fog'))return'🌫️';if(sf.includes('sunny')||sf.includes('clear'))return'☀️';if(sf.includes('partly'))return'⛅';if(sf.includes('cloud')||sf.includes('overcast'))return'☁️';return'🌡️';})();
   const _nLine=(()=>{
@@ -1095,8 +1119,8 @@ function renderHome(){
     {id:'feels',ico:'🥵',lbl:'Feels Like',val:fmt(feels),sub:t.fL(tf,feels),full:`Actual feel: ${fmt(feels)}. ${t.fL(tf,feels)}`,level:Math.abs(feels-tf)>10?'warn':'ok'},
     {id:'rain',ico:'🌧️',lbl:'Rain',val:ab.rain?'Raining Now':ab.storm?'Storming Now':pf+'%',sub:ab.rain?'It is currently raining.':ab.storm?'Active storm conditions right now.':t.rL(pf,sf),full:ab.rain?'It is actively raining right now. '+t.rL(pf,sf):t.rL(pf,sf),level:ab.storm?'danger':ab.rain?'warn':pf>=70?'danger':pf>=40?'warn':'ok'},
     {id:'storm',ico:'⛈️',lbl:'Storms',val:ab.storm?'Active Now':sf.includes('thunder')?'Possible':'Unlikely',sub:ab.storm?'Stormy conditions right now.':sf.includes('thunder')?'Thunderstorms in the forecast.':'No storm activity expected.',full:ab.storm?'Stormy conditions are happening right now. Stay inside and check the Alerts tab.':sf.includes('thunder')?'Thunderstorm activity is possible. Keep an eye on alerts.':'No significant storm activity expected right now.',level:ab.storm?'danger':sf.includes('thunder')?'warn':'ok',autoHide:!ab.storm&&!sf.includes('thunder')},
-    {id:'wind',ico:'💨',lbl:'Wind',val:(_wdir?_wdir+' ':'')+fmtW(wf)+(_gust&&_gust>wf+5?' (gusts '+fmtW(_gust)+')':''),sub:t.wL(wf)+(_gust&&_gust>wf+5?' Gusts to '+_gust+' mph.':''),full:t.wL(wf)+(_wdir?' Wind from the '+_wdir+'.':'')+(_gust&&_gust>wf+5?' Gusts reaching '+_gust+' mph.':''),level:(_gust||wf)>=40?'danger':(_gust||wf)>=20?'warn':'ok',autoHide:wf<5},
-    {id:'sky',ico:'☁️',lbl:'Sky',val:sh(cur).split(' ').slice(0,3).join(' '),sub:t.cL(sf),full:t.cL(sf),level:'ok'},
+    (()=>{const _stormGust=_gust&&_gust>wf*3&&_gust>30;return{id:'wind',ico:'💨',lbl:'Wind',val:(_wdir?_wdir+' ':'')+fmtW(wf)+(_gust&&_gust>wf+5?_stormGust?' (storm gusts '+fmtW(_gust)+')':' (gusts '+fmtW(_gust)+')':''),sub:t.wL(wf)+(_gust&&_gust>wf+5?_stormGust?' Thunderstorm gust potential up to '+fmtW(_gust)+'.':' Gusts to '+fmtW(_gust)+'.':''),full:t.wL(wf)+(_wdir?' Wind from the '+_wdir+'.':'')+(_gust&&_gust>wf+5?_stormGust?' Storm-driven gust potential up to '+fmtW(_gust)+' — not typical surface wind.':' Gusts reaching '+fmtW(_gust)+'.':''),level:(_gust||wf)>=40?'danger':(_gust||wf)>=20?'warn':'ok',autoHide:wf<5&&!_gust};})(),
+    {id:'sky',ico:'☁️',lbl:'Sky',val:_sky!=null?(_sky>=90?'Overcast':_sky>=70?'Mostly Cloudy':_sky>=40?'Partly Cloudy':_sky>=15?'Mostly Clear':'Clear')+' ('+_sky+'%)':sh(cur).split(' ').slice(0,3).join(' '),sub:_sky!=null?(_sky>=90?'Overcast skies. Completely cloud-covered.':_sky>=70?'Mostly cloudy. '+Math.round(100-_sky)+'% clear.':_sky>=40?'Partly cloudy. Some sun getting through.':_sky>=15?'Mostly clear with some clouds.':'Clear skies. Full sun.'):t.cL(sf),full:_sky!=null?`Cloud cover: ${_sky}%. ${_sky>=90?'Complete overcast.':_sky>=70?'Mostly cloudy skies.':_sky>=40?'Scattered clouds, partly sunny.':_sky>=15?'Mostly clear.':'Clear, sunny skies.'}`:t.cL(sf),level:'ok'},
     {id:'fog',ico:'🌫️',lbl:'Visibility',val:_vis!=null?_vis+' mi':(sf.includes('fog')?'Reduced':'Clear'),sub:_vis!=null?(_vis<=0.25?'Near-zero visibility. Extremely dangerous.':_vis<=1?'Very low visibility. Drive with extreme caution.':_vis<=3?'Reduced visibility. Use low beams.':_vis<=5?'Somewhat reduced visibility.':'Visibility is good.'):(sf.includes('fog')?'Fog reducing visibility.':'Visibility is clear.'),full:_vis!=null?`Visibility: ${_vis} miles. ${_vis<=1?'Dangerous driving conditions.':_vis<=5?'Reduced visibility in effect.':'No visibility issues.'}`:( sf.includes('fog')?'Fog is reducing visibility. If you must drive, slow down and use low beams.':'Visibility is clear. No issues expected.'),level:_vis!=null?(_vis<=1?'danger':_vis<=5?'warn':'ok'):(sf.includes('fog')?'warn':'ok'),autoHide:_vis!=null?_vis>7:!sf.includes('fog')},
     {id:'snow',ico:'❄️',lbl:'Snow / Ice',val:_snowAmt?_snowAmt+'"':_iceAmt?_iceAmt+'" ice':(sn?'Expected':'None'),sub:_snowAmt?`${_snowAmt} inches of snow expected.`:_iceAmt?`${_iceAmt} inches of ice accumulation.`:(sn||'No wintry precipitation.'),full:_snowAmt?`${_snowAmt} inches of snowfall expected. Roads will be impacted.`:_iceAmt?`${_iceAmt} inches of ice accumulation. Extremely dangerous.`:(sn||'No snow, ice, or sleet expected right now.'),level:(_snowAmt||_iceAmt||sn)?'danger':'none',autoHide:!_snowAmt&&!_iceAmt&&!sn},
     {id:'alerts',ico:'⚠️',lbl:'Active Alerts',val:(S.alerts||[]).length||'None',sub:(S.alerts||[]).length?'Tap Alerts tab for details.':'No active NWS alerts.',full:(S.alerts||[]).length?`There are ${S.alerts.length} active NWS alert(s). Tap the Alerts tab.`:'No active National Weather Service alerts for your area.',level:(S.alerts||[]).length?'danger':'ok'},
@@ -1104,8 +1128,8 @@ function renderHome(){
     {id:'pressure',ico:'📊',lbl:'Pressure',val:_gr.pressure?.values?.[0]?.value?Math.round(_gr.pressure.values[0].value)+' hPa':'—',sub:_gr.pressure?.values?.[0]?.value?(_gr.pressure.values[0].value<1000?'Low — storm system possible':_gr.pressure.values[0].value>1020?'High — stable and clear':'Normal pressure'):'Pressure data unavailable.',full:_gr.pressure?.values?.[0]?.value?`Barometric pressure: ${Math.round(_gr.pressure.values[0].value)} hPa. ${_gr.pressure.values[0].value<1000?'Low pressure often means incoming storms.':_gr.pressure.values[0].value>1020?'High pressure typically means clear, calm weather.':'Pressure is in the normal range.'}`:'Barometric pressure unavailable.',level:_gr.pressure?.values?.[0]?.value?(_gr.pressure.values[0].value<1000?'warn':'ok'):'none',autoHide:!_gr.pressure?.values?.[0]?.value},
     {id:'dew',ico:'💧',lbl:'Dew Point',val:_dew!=null?fmt(_dew):'—',sub:_dew!=null?(_dew>=70?'Very humid. Sticky and uncomfortable.':_dew>=60?'Humid. You will notice it.':_dew>=50?'Somewhat humid.':_dew>=32?'Comfortable dew point.':'Dry air.'):'Dew point unavailable.',full:_dew!=null?`Dew point: ${fmt(_dew)}. ${_dew>=70?'High humidity — sweat will not evaporate well. Feels hotter.':_dew>=60?'Noticeable humidity. Outdoor activity will feel harder.':_dew>=50?'Moderate humidity.':_dew>=32?'Comfortable humidity levels.':'Low humidity. Air is dry — skin and sinuses may notice.'}`:'Dew point data unavailable from NWS.',level:_dew!=null?(_dew>=70?'warn':'ok'):'none',autoHide:_dew==null||(_dew<60&&_dew>32)},
     {id:'skycover',ico:'🌥️',lbl:'Cloud Cover',val:_sky!=null?_sky+'%':'—',sub:_sky!=null?(_sky>=90?'Overcast. Completely cloud-covered.':_sky>=70?'Mostly cloudy.':_sky>=40?'Partly cloudy.':_sky>=10?'Mostly clear.':'Clear skies.'):'Cloud cover unavailable.',full:_sky!=null?`Sky coverage: ${_sky}%. ${_sky>=90?'Complete overcast.':_sky>=70?'Heavy cloud cover.':_sky>=40?'Scattered clouds.':_sky>=10?'Mostly clear with some clouds.':'Clear skies.'}`:'Sky cover data unavailable.',level:'ok',autoHide:_sky==null},
-    {id:'pollen',ico:'🌼',lbl:'Pollen',val:'—',sub:'Check a local allergy source.',full:'Pollen data is not included in the NWS API. Try a local allergy service.',level:'none',autoHide:true},
-    {id:'uv',ico:'☀️',lbl:'UV Index',val:'—',sub:'UV data unavailable from NWS.',full:'UV index data is not available in the NWS forecast feed.',level:'none',autoHide:true},
+
+
   ];
 
 
@@ -1151,6 +1175,7 @@ function renderHome(){
       <div class="out-q">Should I go outside?</div>
       <div class="out-verdict" style="color:${sc<=25?'var(--green)':sc<=50?'var(--yellow)':'var(--red)'}">${out.v}</div>
       <div class="out-reason">${out.r}</div>
+      ${ir!=='low'?`<div class="out-ir out-ir-${ir}">${ir==='high'?'⛈️ Storm likely later today':'🌦️ Isolated storm chance later'}</div>`:''}
     </div>
     <div class="chips-hdr">
       <div class="chips-lbl">Right Now — ${wIco(sh(cur))} ${sh(cur).slice(0,26)}</div>
@@ -1299,9 +1324,39 @@ function renderFutureSummary(){
   const hasSnow=days.some(d=>d.sf.toLowerCase().includes('snow'));
   const avgP=days.reduce((s,d)=>s+d.prec,0)/days.length;
   let line='';
-  if(S.tone==='unhinged'){if(hasStorm&&hasHeat)line='Hot chaos incoming. Storms AND heat. The atmosphere needs therapy.';else if(hasStorm)line='Storms on the horizon. The sky has plans, and not the fun kind.';else if(hasHeat)line="A hot week incoming. Hydrate. I'm begging you.";else if(hasSnow)line='Wintry vibes all week. The sky chose violence.';else if(avgP>50)line="A soggy week ahead. Your umbrella is about to earn its keep.";else line='A mostly calm week. Suspicious.';}
-  else if(S.tone==='terse'){if(hasStorm)line='Storms somewhere this week. Keep watching.';else if(hasHeat)line='A hot week. Stay hydrated.';else if(hasSnow)line='Some wintry weather ahead.';else if(avgP>50)line='Rainy week. Umbrella weather.';else line='A fairly calm week.';}
-  else{if(hasStorm)line='Storm activity is expected this week. Monitor alerts.';else if(hasHeat)line='Above-average temperatures throughout the week.';else if(hasSnow)line='Winter weather is expected this week.';else if(avgP>50)line='A predominantly wet week ahead.';else line='A calm, typical weather week ahead.';}
+  if(S.tone==='unhinged'){
+    const _sd2=days.filter(d=>d.sf.toLowerCase().includes('thunder'));
+    const _pk2=_sd2.reduce((p,d)=>d.prec>p.prec?d:p,_sd2[0]||null);
+    if(hasStorm&&hasHeat)line='Hot chaos incoming. Storms AND heat. The atmosphere needs therapy.';
+    else if(hasStorm&&_pk2&&_pk2.prec>=50)line=`Storms on the horizon — ${_pk2.name} looks spicy (${_pk2.prec}% chance). The sky has PLANS.`;
+    else if(hasStorm)line='Storm vibes this week. The atmosphere has opinions. Unpleasant ones.';
+    else if(hasHeat)line="A hot week incoming. Hydrate. I'm begging you.";
+    else if(hasSnow)line='Wintry vibes all week. The sky chose violence.';
+    else if(avgP>50)line="A soggy week ahead. Your umbrella is about to earn its keep.";
+    else line='A mostly calm week. Suspicious.';
+  }
+  else if(S.tone==='terse'){
+    const stormDays=days.filter(d=>d.sf.toLowerCase().includes('thunder'));
+    const peakStorm=stormDays.reduce((p,d)=>d.prec>p.prec?d:p,stormDays[0]||null);
+    const highRainDays=days.filter(d=>d.prec>=50);
+    if(hasStorm&&peakStorm&&peakStorm.prec>=50)line=`Storm risk midweek — highest chance ${peakStorm.name} (${peakStorm.prec}%). Keep watching.`;
+    else if(hasStorm)line=`Scattered storm chances this week${peakStorm?' — watch '+peakStorm.name:''}.`;
+    else if(hasHeat)line='A hot week. Stay hydrated.';
+    else if(hasSnow)line='Some wintry weather ahead.';
+    else if(highRainDays.length>=3)line=`Wet week ahead. Rain likely ${highRainDays.slice(0,3).map(d=>d.name).join(', ')}.`;
+    else if(avgP>50)line='Rainy week. Umbrella weather.';
+    else line='A fairly calm week.';
+  }
+  else{
+    const _sd3=days.filter(d=>d.sf.toLowerCase().includes('thunder'));
+    const _pk3=_sd3.reduce((p,d)=>d.prec>p.prec?d:p,_sd3[0]||null);
+    if(hasStorm&&_pk3&&_pk3.prec>=50)line=`Thunderstorm activity is likely this week, with the highest risk on ${_pk3.name} (${_pk3.prec}%). Monitor alerts.`;
+    else if(hasStorm)line='Some thunderstorm activity possible this week. Stay aware of alerts.';
+    else if(hasHeat)line='Above-average temperatures throughout the week.';
+    else if(hasSnow)line='Winter weather is expected this week.';
+    else if(avgP>50)line='A predominantly wet week ahead.';
+    else line='A calm, typical weather week ahead.';
+  }
   const wcs=[{t:'best',tx:'Best: '+days[bi].name}];
   if(wi!==bi)wcs.push({t:'worst',tx:'Rough: '+days[wi].name});
   if(hasStorm)wcs.push({t:'warn',tx:'Storm risk'});
