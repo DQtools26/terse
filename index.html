@@ -201,6 +201,10 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 
 .out-card{padding:18px 20px;margin-bottom:12px;}
 .now-strip{display:flex;align-items:center;gap:14px;padding:14px 18px;margin-bottom:12px;}
+.now-sun{margin-left:auto;text-align:right;flex-shrink:0;}
+.now-sun-ico{font-size:18px;line-height:1;}
+.now-sun-lbl{font-size:11px;font-weight:600;color:var(--accent);white-space:nowrap;margin-top:1px;}
+.now-sun-times{font-size:10px;color:var(--text3);white-space:nowrap;margin-top:1px;}
 .now-ico{font-size:2.4rem;line-height:1;flex-shrink:0;}
 .now-body{display:flex;flex-direction:column;gap:2px;}
 .now-temp{font-size:1.5rem;font-weight:700;color:var(--text1);line-height:1;}
@@ -572,6 +576,72 @@ function wmSetTheme(t){setUI(t);document.querySelectorAll('.wm-theme').forEach(e
 function closeWelcome(){document.getElementById('welcome-modal').style.display='none';S.welcomed=true;save();}
 function maybeShowWelcome(){if(!S.welcomed){document.getElementById('welcome-modal').style.display='flex';}}
 function setTime12(v){S.time12=v;save();if(S.loaded)renderAll();}
+// Build a Map from hour-timestamp → value for a gridRaw property
+// gridRaw values have validTime like "2024-01-01T07:00:00+00:00/PT1H"
+// ─── SUNRISE / SUNSET ─────────────────────────────────────────
+function sunTimes(lat,lon,date){
+  // Returns {rise, set} as Date objects for given lat/lon/date
+  // Based on NOAA solar calc (simplified Meeus)
+  const rad=Math.PI/180;
+  const d=date||new Date();
+  const JD=(d.getTime()/86400000)+2440587.5;
+  const n=Math.round(JD-2451545.0-0.0009-lon/360);
+  const Jstar=2451545.0+0.0009+lon/360+n;
+  const M=(357.5291+0.98560028*(Jstar-2451545)%360)*rad;
+  const C=(1.9148*Math.sin(M)+0.0200*Math.sin(2*M)+0.0003*Math.sin(3*M));
+  const lam=((280.4664+0.98564736*(Jstar-2451545)+C+180)%360)*rad;
+  const dec=Math.asin(Math.sin(-23.4559*rad)*Math.cos(lam));
+  const cosH=(Math.sin(-0.8333*rad)-Math.sin(lat*rad)*Math.sin(dec))/(Math.cos(lat*rad)*Math.cos(dec));
+  if(cosH<-1)return{rise:null,set:null,alwaysUp:true};
+  if(cosH>1)return{rise:null,set:null,alwaysDown:true};
+  const H=Math.acos(cosH)/rad;
+  const Jtransit=Jstar+(0.0053*Math.sin(M)-0.0069*Math.sin(2*lam));
+  const Jrise=Jtransit-H/360;
+  const Jset=Jtransit+H/360;
+  const toDate=jd=>new Date((jd-2440587.5)*86400000);
+  return{rise:toDate(Jrise),set:toDate(Jset)};
+}
+function fmtSun(date){
+  if(!date)return'—';
+  return date.toLocaleString('en-US',{hour:'numeric',minute:'2-digit',hour12:S.time12});
+}
+function sunStatus(lat,lon){
+  // Returns {rise, set, isDay, minsToEvent, eventLabel}
+  const now=new Date();
+  const today=sunTimes(lat,lon,now);
+  const tomorrow=sunTimes(lat,lon,new Date(now.getTime()+86400000));
+  if(!today.rise)return{isDay:today.alwaysUp,rise:null,set:null,label:today.alwaysUp?'Midnight sun':'Polar night'};
+  const isDay=now>=today.rise&&now<today.set;
+  const nextEvent=isDay?today.set:now<today.rise?today.rise:tomorrow.rise;
+  const mins=Math.round((nextEvent-now)/60000);
+  const hrs=Math.floor(mins/60),rem=mins%60;
+  const timeStr=hrs>0?`${hrs}h ${rem}m`:rem+'m';
+  const label=isDay?`Sunset in ${timeStr}`:`Sunrise in ${timeStr}`;
+  return{rise:today.rise,set:today.set,isDay,label,mins,nextEvent};
+}
+
+function grMap(prop){
+  const m=new Map();
+  if(!prop?.values)return m;
+  prop.values.forEach(({validTime,value})=>{
+    // Strip the duration part (/PTxH) and normalize to hour key
+    const ts=validTime.split('/')[0];
+    const d=new Date(ts);
+    // Key by rounded-to-hour UTC ms
+    m.set(Math.round(d.getTime()/3600000)*3600000,value);
+  });
+  return m;
+}
+// Get gridRaw value for a given period startTime string
+function grVal(map,startTime){
+  const d=new Date(startTime);
+  const key=Math.round(d.getTime()/3600000)*3600000;
+  // Try exact match, then ±1 hour
+  if(map.has(key))return map.get(key);
+  if(map.has(key-3600000))return map.get(key-3600000);
+  if(map.has(key+3600000))return map.get(key+3600000);
+  return null;
+}
 function updateAmbChip(){
   const chip=document.getElementById('amb-chip');
   const ico=document.getElementById('amb-ico');
@@ -583,7 +653,7 @@ function updateAmbChip(){
   const tf=tF(cur);
   const ab=isActivelyBad();
   chip.className='amb-chip';
-  let icoTxt,lblTxt;
+  let icoTxt='',lblTxt='';
   if(sf.includes('tornado')){icoTxt='🌪️';lblTxt='Tornado';chip.classList.add('amb-tornado','amb-storm');}
   else if(ab.storm){icoTxt='⛈️';lblTxt='Storm';chip.classList.add('amb-storm');}
   else if(ab.snow){icoTxt='❄️';lblTxt='Snowing';chip.classList.add('amb-snow');}
@@ -596,11 +666,20 @@ function updateAmbChip(){
     else if(tf<=15){icoTxt='🧊';lblTxt=fmt(tf);}
     else if(tf<=32){icoTxt='❄️';lblTxt=fmt(tf);}
     else if(sf.includes('fog')){icoTxt='🌫️';lblTxt='Foggy';}
-    else if(sf.includes('sunny')||sf.includes('clear')){icoTxt='☀️';lblTxt=fmt(tf);}
-    else if(sf.includes('partly')){icoTxt='⛅';lblTxt=fmt(tf);}
-    else if(sf.includes('cloud')||sf.includes('overcast')){icoTxt='☁️';lblTxt=fmt(tf);}
-    else if(sf.includes('thunder')){icoTxt='⛈️';lblTxt='Storm chance';}
-    else{icoTxt='🌡️';lblTxt=fmt(tf);}
+    else{
+      // Use day/night from sun calc
+      const _ambSun=S.lat?sunStatus(S.lat,S.lon):{isDay:true,mins:999};
+      const _nearSunset=_ambSun.isDay&&_ambSun.mins<=45;
+      const _nearSunrise=!_ambSun.isDay&&_ambSun.mins<=45;
+      if(_nearSunset){icoTxt='🌅';lblTxt='Sunset soon';}
+      else if(_nearSunrise){icoTxt='🌄';lblTxt='Sunrise soon';}
+      else if(!_ambSun.isDay){icoTxt='🌙';lblTxt=fmt(tf);}
+      else if(sf.includes('sunny')||sf.includes('clear')){icoTxt='☀️';lblTxt=fmt(tf);}
+      else if(sf.includes('partly')){icoTxt='⛅';lblTxt=fmt(tf);}
+      else if(sf.includes('cloud')||sf.includes('overcast')){icoTxt='☁️';lblTxt=fmt(tf);}
+      else if(sf.includes('thunder')){icoTxt='⛈️';lblTxt='Storm chance';}
+      else{icoTxt='🌡️';lblTxt=fmt(tf);}
+    }
   }
   ico.textContent=icoTxt;
   lbl.textContent=lblTxt;
@@ -781,21 +860,23 @@ async function fetchWeather(){
 
 
     const HA={};
-    const[fc,hr,alFZ,alCZ,gr]=await Promise.allSettled([
+    const[fc,hr,alFZ,alCZ,gr,alPT]=await Promise.allSettled([
       fetchT(`https://api.weather.gov/gridpoints/${S.gridId}/${S.gridX},${S.gridY}/forecast`,{headers:HA}),
       fetchT(`https://api.weather.gov/gridpoints/${S.gridId}/${S.gridX},${S.gridY}/forecast/hourly`,{headers:HA}),
       S.forecastZone?fetchT(`https://api.weather.gov/alerts/active?zone=${S.forecastZone}`,{headers:HA},6000):Promise.resolve(null),
       S.countyZone?fetchT(`https://api.weather.gov/alerts/active?zone=${S.countyZone}`,{headers:HA},6000):Promise.resolve(null),
       fetchT(`https://api.weather.gov/gridpoints/${S.gridId}/${S.gridX},${S.gridY}`,{headers:HA},12000),
+      fetchT(`https://api.weather.gov/alerts/active?point=${S.lat.toFixed(4)},${S.lon.toFixed(4)}`,{headers:HA},6000),
     ]);
     // Parse all JSON in parallel
     _setLdMsg('Crunching the numbers...');
-    const[fcJ,hrJ,alAJ,alBJ,grJ]=await Promise.allSettled([
+    const[fcJ,hrJ,alAJ,alBJ,grJ,alPTJ]=await Promise.allSettled([
       fc.status==='fulfilled'&&fc.value.ok?fc.value.json():Promise.resolve(null),
       hr.status==='fulfilled'&&hr.value.ok?hr.value.json():Promise.resolve(null),
       alFZ.status==='fulfilled'&&alFZ.value?.ok?alFZ.value.json():Promise.resolve(null),
       alCZ.status==='fulfilled'&&alCZ.value?.ok?alCZ.value.json():Promise.resolve(null),
       gr.status==='fulfilled'&&gr.value.ok?gr.value.json():Promise.resolve(null),
+      alPT.status==='fulfilled'&&alPT.value?.ok?alPT.value.json():Promise.resolve(null),
     ]);
     if(fcJ.value)S.forecast=fcJ.value.properties;
     if(hrJ.value)S.hourly=hrJ.value.properties;
@@ -816,8 +897,15 @@ async function fetchWeather(){
     }
     const alertsA=alAJ.value?.features||[];
     const alertsB=alBJ.value?.features||[];
+    // Point-based alerts = polygon contains exact location (IN POLYGON = directly affected)
+    const alertsPT=alPTJ.value?.features||[];
+    const ptIds=new Set(alertsPT.map(a=>a.properties?.id));
+    // Tag each alert with its scope for display
+    alertsA.forEach(a=>{if(!a._scope)a._scope=ptIds.has(a.properties?.id)?'polygon':'zone';});
+    alertsB.forEach(a=>{if(!a._scope)a._scope=ptIds.has(a.properties?.id)?'polygon':'zone';});
+    alertsPT.forEach(a=>{a._scope='polygon';});
     const seen=new Set();
-    S.alerts=[...alertsA,...alertsB].filter(a=>{
+    S.alerts=[...alertsA,...alertsB,...alertsPT].filter(a=>{
       const id=a.id||a.properties?.id||JSON.stringify(a.properties?.event)+a.properties?.onset;
       if(seen.has(id))return false;
       seen.add(id);
@@ -918,10 +1006,13 @@ function calcBad(){
   let alertBonus=0;
   const lines=[];
 
-  // Alerts
+  // Alerts — polygon alerts hit harder (directly in your area vs county-wide)
   (S.alerts||[]).forEach(a=>{
     const e=(a.properties?.event||'').toLowerCase();
     const name=a.properties?.event||'Alert';
+    const _isPoly=a._scope==='polygon';
+    // Polygon alerts get a 1.25x multiplier — they affect your exact location
+    const _pm=_isPoly?1.25:1.0;
     let floor=0,bonus=0,ico='⚠️';
     if(e.includes('tornado warning')){floor=90;ico='🌪️';}
     else if(e.includes('severe thunderstorm warning')){floor=70;ico='⛈️';}
@@ -940,10 +1031,14 @@ function calcBad(){
     else if(e.includes('watch')){bonus=22;ico='👀';}
     else if(e.includes('warning')){bonus=20;ico='⚠️';}
     else{bonus=8;}
+    // Apply polygon multiplier
+    if(floor>0)floor=Math.min(100,Math.round(floor*_pm));
+    if(bonus>0)bonus=Math.round(bonus*_pm);
+    const _scopeTag=_isPoly?' 📍':'';
     if(floor>alertFloor)alertFloor=floor;
     alertBonus+=bonus;
-    if(floor>0)lines.push({ico,label:name,pts:floor,type:'floor'});
-    else if(bonus>0)lines.push({ico,label:name,pts:'+'+bonus,type:'bonus'});
+    if(floor>0)lines.push({ico,label:name+_scopeTag,pts:floor,type:'floor'});
+    else if(bonus>0)lines.push({ico,label:name+_scopeTag,pts:'+'+bonus,type:'bonus'});
   });
 
   // Conditions
@@ -1118,31 +1213,41 @@ function renderHome(){
   const tf=tF(cur),wf=wSpd(cur),pf=prec(cur),hf=hum(cur),sf=sh(cur).toLowerCase();
   const {score:sc,lines:bmLines}=calcBad(),col=badCol(sc);
   const ab=isActivelyBad();
-  // gridRaw extractions (must be before feels-like)
+  // gridRaw extractions — timestamp-matched to current period
   const _gr=S.gridRaw||{};
-  // Use NWS apparentTemperature if available, sanity-checked
+  const _grT=cur.startTime;
+  const _dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  const _grApp=grMap(_gr.apparentTemperature);
+  const _grGust=grMap(_gr.windGust);
+  const _grDew=grMap(_gr.dewpoint);
+  const _grSky=grMap(_gr.skyCover);
+  const _grVis=grMap(_gr.visibility);
+  const _grDir=grMap(_gr.windDirection);
+  const _grSnow=grMap(_gr.snowfallAmount);
+  const _grIce=grMap(_gr.iceAccumulation);
+  // Use NWS apparentTemperature if available, timestamp-matched and sanity-checked
   let feels=tf;
-  const _appTemp=_gr.apparentTemperature?.values?.[0]?.value;
-  if(_appTemp!=null){
-    const _appF=Math.round(_appTemp*9/5+32);
-    // Sanity check: apparent temp shouldn't deviate >25°F from actual
-    if(Math.abs(_appF-tf)<=25)feels=_appF;
-    else feels=tf; // gridRaw timestamp mismatch — fall back
-  }
-  // Fallback: only apply heat index above 80°F, wind chill below 50°F
+  const _appRaw=grVal(_grApp,_grT);
+  if(_appRaw!=null){const _appF=Math.round(_appRaw*9/5+32);if(Math.abs(_appF-tf)<=25)feels=_appF;}
   if(feels===tf){
     if(tf>=80&&hf!==null)feels=Math.round(tf+(hf-40)*0.15);
     else if(tf<50&&wf>=3)feels=Math.round(tf-Math.pow(wf,0.16)*5+22);
   }
-  // Never let feels deviate more than 20°F from actual in either direction
   feels=Math.max(tf-20,Math.min(tf+20,feels));
-  const _gust=(()=>{const v=_gr.windGust?.values?.[0]?.value;return v?Math.round(v*2.237):null;})();
-  const _dew=(()=>{const v=_gr.dewpoint?.values?.[0]?.value;return v?Math.round(v*9/5+32):null;})();
-  const _sky=(()=>{const v=_gr.skyCover?.values?.[0]?.value;return v!=null?Math.round(v):null;})();
-  const _vis=(()=>{const v=_gr.visibility?.values?.[0]?.value;return v?Math.round(v/1609.34):null;})();
-  const _wdir=(()=>{const v=_gr.windDirection?.values?.[0]?.value;if(v==null)return null;const dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];return dirs[Math.round(v/22.5)%16];})();
-  const _snowAmt=(()=>{const v=_gr.snowfallAmount?.values?.[0]?.value;return v?Math.round(v*0.0393701*10)/10:null;})();
-  const _iceAmt=(()=>{const v=_gr.iceAccumulation?.values?.[0]?.value;return v?Math.round(v*0.0393701*100)/100:null;})();
+  const _gustRaw=grVal(_grGust,_grT);
+  const _gust=_gustRaw!=null?Math.round(_gustRaw*2.237):null;
+  const _dewRaw=grVal(_grDew,_grT);
+  const _dew=_dewRaw!=null?Math.round(_dewRaw*9/5+32):null;
+  const _skyRaw=grVal(_grSky,_grT);
+  const _sky=_skyRaw!=null?Math.round(_skyRaw):null;
+  const _visRaw=grVal(_grVis,_grT);
+  const _vis=_visRaw!=null?Math.round(_visRaw/1609.34):null;
+  const _dirRaw=grVal(_grDir,_grT);
+  const _wdir=_dirRaw!=null?_dirs[Math.round(_dirRaw/22.5)%16]:null;
+  const _snowRaw=grVal(_grSnow,_grT);
+  const _snowAmt=_snowRaw?Math.round(_snowRaw*0.0393701*10)/10:null;
+  const _iceRaw=grVal(_grIce,_grT);
+  const _iceAmt=_iceRaw?Math.round(_iceRaw*0.0393701*100)/100:null;
   const sn=t.snL(sf);
   // Interruption risk: scan next 12 hourly periods for storm chance
   const _hrPs=S.hourly?.periods?.slice(0,12)||[];
@@ -1151,6 +1256,7 @@ function renderHome(){
   const ir=_stormHrs.length>=4||_maxHrPrec>=70?'high':_stormHrs.length>=2||_maxHrPrec>=40?'moderate':'low';
   const out=t.out(sc,ab,ir);
   // NOW STRIP
+  const _sunSt=S.lat?sunStatus(S.lat,S.lon):{isDay:true,label:'',rise:null,set:null};
   const _nIco=(()=>{if(ab.storm)return'⛈️';if(ab.snow)return'❄️';if(ab.rain)return'🌧️';if(sf.includes('fog'))return'🌫️';if(sf.includes('sunny')||sf.includes('clear'))return'☀️';if(sf.includes('partly'))return'⛅';if(sf.includes('cloud')||sf.includes('overcast'))return'☁️';return'🌡️';})();
   const _nLine=(()=>{
     if(ab.storm||ab.snow||ab.rain)return out.r;
@@ -1214,8 +1320,8 @@ function renderHome(){
         // Smart fallback: suggest water if humid and no other kit
         const _baseKit=t.kit(sc,pf,wf,sn);
         const _noExtras=_baseKit.includes('nothing')||_baseKit.includes("you're good")||_baseKit.includes("You're set");
-        kitTxt=_noExtras&&_dew!=null&&_dew>=65?'Grab water if you're outside for a while. Humid today.':_baseKit;
-        if(_noExtras&&tf>=90)kitTxt='Grab water. Sunscreen too — it's hot.';
+        kitTxt=_noExtras&&_dew!=null&&_dew>=65?'Grab water if heading outside for a while. Humid today.':_baseKit;
+        if(_noExtras&&tf>=90)kitTxt='Grab water. Sunscreen too. It is hot.';
       }
       return{id:'kit',ico:'🎒',lbl:'What You Need',val:kitVal,sub:kitTxt,full:kitTxt,level:ab.storm?'danger':ab.rain||ab.snow?'warn':sc>=65?'danger':sc>=35?'warn':'ok'};
     })(),
@@ -1264,6 +1370,11 @@ function renderHome(){
         <div class="now-temp">${fmt(tf)}</div>
         <div class="now-line">${_nLine}</div>
       </div>
+      <div class="now-sun">
+        <div class="now-sun-ico">${_sunSt.isDay?'🌅':'🌄'}</div>
+        <div class="now-sun-lbl">${_sunSt.label||''}</div>
+        <div class="now-sun-times">${_sunSt.rise?'↑'+fmtSun(_sunSt.rise):''} ${_sunSt.set?'↓'+fmtSun(_sunSt.set):''}</div>
+      </div>
     </div>
     <div class="glass-sm out-card">
       <div class="out-q">Should I go outside?</div>
@@ -1307,16 +1418,35 @@ function renderWarnings(){
     document.getElementById('warn-inner').innerHTML=`<div class="all-clear fade-in"><div class="ac-icon">✅</div><div class="ac-title">All Clear</div><div class="ac-sub">${m[S.tone]||m.terse}</div></div>`;
     return;
   }
-  let h=`<div class="fade-in"><div style="margin-bottom:12px"><div style="font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3)">${al.length} Active Alert${al.length>1?'s':''}</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Official NWS alerts — translated</div></div>`;
-  al.forEach((a,i)=>{
+  const _polyAlerts=al.filter(a=>a._scope==='polygon');
+  const _zoneAlerts=al.filter(a=>a._scope!=='polygon');
+  const _polyCount=_polyAlerts.length;
+  // Sort: polygon first, then zone
+  const _sorted=[..._polyAlerts,..._zoneAlerts];
+  let h=`<div class="fade-in">`;
+  if(_polyCount>0)h+=`<div class="al-section-hdr al-section-direct">📍 Directly In Your Area</div>`;
+  else h+=`<div style="margin-bottom:8px"><div style="font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3)">${al.length} Active Alert${al.length>1?'s':''}</div><div style="font-size:12px;color:var(--text2);margin-top:2px">County/zone alerts — may not affect your exact location · NWS</div></div>`;
+  let _inZoneSection=false;
+  _sorted.forEach((a,i)=>{
+    if(_polyCount>0&&!_inZoneSection&&a._scope!=='polygon'){
+      _inZoneSection=true;
+      h+=`<div class="al-section-hdr al-section-zone">📡 Nearby / County-Wide</div>`;
+    }
     const p=a.properties||{},ev=p.event||'Alert';
     const iw=ev.toLowerCase().includes('warning'),iwt=ev.toLowerCase().includes('watch');
     const bc=iw?'badge-warning':iwt?'badge-watch':'badge-advisory';
     const bl=iw?'⚠️ WARNING':iwt?'👀 WATCH':'ℹ️ ADVISORY';
     const on=p.onset?new Date(p.onset).toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
     const ex=p.expires?new Date(p.expires).toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
-    h+=`<div class="glass alert-card">
-      <div class="al-badge ${bc}">${bl}</div>
+    const _scope=a._scope||'zone';
+    const _scopeBadge=_scope==='polygon'
+      ?'<span class="al-scope al-scope-poly">📍 In Your Area</span>'
+      :'<span class="al-scope al-scope-zone">📡 County / Zone</span>';
+    h+=`<div class="glass alert-card${_scope==='polygon'?' al-direct':''}">
+      <div class="al-header-row">
+        <div class="al-badge ${bc}">${bl}</div>
+        ${_scopeBadge}
+      </div>
       <div class="al-title">${ev}</div>
       <div class="al-body">${xlateAlert(ev)}</div>
       ${on||ex?`<div class="al-time">${on?'Starts '+on:''}${on&&ex?' · ':''}${ex?'Expires '+ex:''}</div>`:''}
@@ -1348,12 +1478,12 @@ function renderHourly(){
   if(!ps.length){document.getElementById('hour-inner').innerHTML='<div style="padding:40px;text-align:center;color:var(--text2)">No hourly data.</div>';return;}
   const now=new Date();
   const next=ps.filter(p=>new Date(p.startTime)>=now).slice(0,24);
-  // Build gridRaw lookup: apparentTemp and windGust by hour index
+  // Build timestamp-matched gridRaw maps for hourly tab
   const _grHr=S.gridRaw||{};
-  const _gustVals=_grHr.windGust?.values||[];
-  const _appVals=_grHr.apparentTemperature?.values||[];
-  const _dewVals=_grHr.dewpoint?.values||[];
-  const _dirVals=_grHr.windDirection?.values||[];
+  const _hGust=grMap(_grHr.windGust);
+  const _hApp=grMap(_grHr.apparentTemperature);
+  const _hDew=grMap(_grHr.dewpoint);
+  const _hDir=grMap(_grHr.windDirection);
   const _dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   let h='<div class="fade-in">';
   next.forEach((p,idx)=>{
@@ -1374,14 +1504,15 @@ function renderHourly(){
     const stormLbl=_stormTier==='tiny'?'⚡ Tiny storm chance':_stormTier==='small'?'⚡ Small storm chance':_stormTier==='possible'?'⛈️ Storm possible':'⛈️ Storms likely';
     const snow=sfl.includes('snow')||sfl.includes('sleet')||sfl.includes('ice');
     const rain=sfl.includes('rain')||sfl.includes('shower')||sfl.includes('drizzle');
-    // Get gust from gridRaw by matching time index
-    const _gustV=_gustVals[idx]?.value;
-    const _gust=_gustV?Math.round(_gustV*2.237):null;
-    const _appV=_appVals[idx]?.value;
+    // Get gridRaw values matched by period timestamp
+    const _pt=p.startTime;
+    const _gustV=grVal(_hGust,_pt);
+    const _gust=_gustV!=null?Math.round(_gustV*2.237):null;
+    const _appV=grVal(_hApp,_pt);
     const _app=_appV!=null?Math.round(_appV*9/5+32):null;
-    const _dewV=_dewVals[idx]?.value;
+    const _dewV=grVal(_hDew,_pt);
     const _dew=_dewV!=null?Math.round(_dewV*9/5+32):null;
-    const _dirV=_dirVals[idx]?.value;
+    const _dirV=grVal(_hDir,_pt);
     const _dir=_dirV!=null?_dirs[Math.round(_dirV/22.5)%16]:null;
     // Highlight class
     const hlCls=(_hasThunderH&&_likelyH)?' hl':snow?' hr-snow':(rain&&!_hasThunderH)?' hr-rain':_hasThunderH?' hr-rain':'';
@@ -1595,10 +1726,11 @@ function renderFutureFull(){
   const t=tone();
   const tf=tF(cur),wf=wSpd(cur),pf=prec(cur),hf=hum(cur),sf=sh(cur);
   const _gr2=S.gridRaw||{};
-  const _gust2=(()=>{const v=_gr2.windGust?.values?.[0]?.value;return v?Math.round(v*2.237):null;})();
-  const _dew2=(()=>{const v=_gr2.dewpoint?.values?.[0]?.value;return v?Math.round(v*9/5+32):null;})();
-  const _sky2=(()=>{const v=_gr2.skyCover?.values?.[0]?.value;return v!=null?Math.round(v):null;})();
-  const _vis2=(()=>{const v=_gr2.visibility?.values?.[0]?.value;return v?Math.round(v/1609.34):null;})();
+  const _ff_t=(getCur()||getDay())?.startTime||new Date().toISOString();
+  const _gust2=(()=>{const v=grVal(grMap(_gr2.windGust),_ff_t);return v!=null?Math.round(v*2.237):null;})();
+  const _dew2=(()=>{const v=grVal(grMap(_gr2.dewpoint),_ff_t);return v!=null?Math.round(v*9/5+32):null;})();
+  const _sky2=(()=>{const v=grVal(grMap(_gr2.skyCover),_ff_t);return v!=null?Math.round(v):null;})();
+  const _vis2=(()=>{const v=grVal(grMap(_gr2.visibility),_ff_t);return v!=null?Math.round(v/1609.34):null;})();
   const stats=[
     {l:'Temperature',v:fmt(tf),i:t.tL(tf)},
     {l:'Wind',v:(_gr2.windDirection?.values?.[0]?.value!=null?['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(_gr2.windDirection.values[0].value/22.5)%16]+' ':'')+wf+' mph'+(_gust2&&_gust2>wf+5?' (gusts '+_gust2+')':''),i:t.wL(wf)},
