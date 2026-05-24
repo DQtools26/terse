@@ -587,12 +587,21 @@ function updateAmbChip(){
   if(sf.includes('tornado')){icoTxt='🌪️';lblTxt='Tornado';chip.classList.add('amb-tornado','amb-storm');}
   else if(ab.storm){icoTxt='⛈️';lblTxt='Storm';chip.classList.add('amb-storm');}
   else if(ab.snow){icoTxt='❄️';lblTxt='Snowing';chip.classList.add('amb-snow');}
-  else if(ab.rain){icoTxt='🌧️';lblTxt='Raining';chip.classList.add('amb-rain');}
-  else{const wf=wSpd(cur);if(wf>=20){icoTxt='💨';lblTxt=fmtW(wf);chip.classList.add('amb-wind');}
-  else if(sf.includes('sunny')||sf.includes('clear')){icoTxt='☀️';lblTxt=fmt(tf);}
-  else if(sf.includes('partly')){icoTxt='⛅';lblTxt=fmt(tf);}
-  else if(sf.includes('cloud')||sf.includes('overcast')){icoTxt='☁️';lblTxt=fmt(tf);}
-  else{icoTxt='🌡️';lblTxt=fmt(tf);}}
+  else if(ab.rain){icoTxt='☂️';lblTxt='Raining';chip.classList.add('amb-rain');}
+  else{
+    const wf=wSpd(cur);
+    if(wf>=25){icoTxt='💨';lblTxt=fmtW(wf);chip.classList.add('amb-wind');}
+    else if(tf>=100){icoTxt='🔥';lblTxt=fmt(tf);}
+    else if(tf>=90){icoTxt='☀️';lblTxt='Hot · '+fmt(tf);}
+    else if(tf<=15){icoTxt='🧊';lblTxt=fmt(tf);}
+    else if(tf<=32){icoTxt='❄️';lblTxt=fmt(tf);}
+    else if(sf.includes('fog')){icoTxt='🌫️';lblTxt='Foggy';}
+    else if(sf.includes('sunny')||sf.includes('clear')){icoTxt='☀️';lblTxt=fmt(tf);}
+    else if(sf.includes('partly')){icoTxt='⛅';lblTxt=fmt(tf);}
+    else if(sf.includes('cloud')||sf.includes('overcast')){icoTxt='☁️';lblTxt=fmt(tf);}
+    else if(sf.includes('thunder')){icoTxt='⛈️';lblTxt='Storm chance';}
+    else{icoTxt='🌡️';lblTxt=fmt(tf);}
+  }
   ico.textContent=icoTxt;
   lbl.textContent=lblTxt;
   chip.style.display='flex';
@@ -1026,12 +1035,12 @@ const T={
       if(ab.storm)return{v:'NO',r:'It is actively storming right now. Stay inside.'};
       if(ab.snow)return{v:'NO',r:'Wintry precipitation is falling. Roads may be slippery.'};
       if(ab.rain)return{v:'MAYBE',r:'It is currently raining. Bring an umbrella if you go out.'};
-      if(ir==='high')return{v:'MAYBE',r:'Conditions are fine right now, but storms are likely later today. Plan around it.'};
-      if(ir==='moderate')return{v:'YES',r:'Currently clear. Isolated storm chance this afternoon — keep an eye on radar.'};
+      if(ir==='high')return{v:'MAYBE',r:'Okay right now, but storms are likely later today. Have a plan before you head out.'};
+      if(ir==='moderate')return{v:'YES',r:'Mostly fine right now. Small storm chance nearby — worth watching later.'};
       if(sc<=25)return{v:'YES',r:'Conditions are comfortable and safe.'};
       if(sc<=50)return{v:'MAYBE',r:'Some weather to watch. Check the details.'};
       return{v:'NO',r:'Conditions make outdoor activity inadvisable.'};},
-    sum(sc,ab){if(ab?.storm)return'Active storm conditions right now. Take it seriously.';if(ab?.rain)return sc>25?'Rain and some weather to watch today.':'Light rain right now. Otherwise manageable.';if(sc<=20)return'No major weather concerns today.';if(sc<=40)return'Some minor conditions worth noting.';if(sc<=60)return'Moderate concerns. Stay informed.';if(sc<=80)return'Significant weather today. Take precautions.';return'Dangerous conditions. Follow official guidance.';},
+    sum(sc,ab){if(ab?.storm)return'Active storm conditions right now. Take it seriously.';if(ab?.rain)return sc>25?'Rain and some weather to watch today.':'Light rain right now. Otherwise manageable.';if(sc<=20)return'No significant weather concerns today.';if(sc<=40)return'Some minor conditions worth noting.';if(sc<=60)return'Moderate concerns. Stay informed.';if(sc<=80)return'Significant weather today. Take precautions.';return'Dangerous conditions. Follow official guidance.';},
     kit(sc,p,w,sn){const i=[];if(sn)i.push('ice scraper / shovel');if(p>=50)i.push('umbrella');if(w>=25)i.push('windproof jacket');if(sc>=50)i.push('weather radio');if(sc>=65)i.push('emergency kit');if(!i.length)i.push('nothing extra today');return'Recommended: '+i.join(', ')+'.';},
   },
   terse:{
@@ -1045,12 +1054,12 @@ const T={
       if(ab.storm)return{v:'NO',r:"It's actively storming. Inside is the only correct answer."};
       if(ab.snow)return{v:'NO',r:'Snow or sleet is falling right now. Tread carefully if you must go.'};
       if(ab.rain)return{v:'MAYBE',r:"It's raining right now. Umbrella is not optional."};
-      if(ir==='high')return{v:'PROBABLY',r:'Fine now. Storms likely this afternoon — have a plan.'};
-      if(ir==='moderate')return{v:'YES',r:'Clear now. Isolated storm chance later. Keep an eye out.'};
+      if(ir==='high')return{v:'PROBABLY',r:'Fine now but storms are likely later today. Make a plan.'};
+      if(ir==='moderate')return{v:'YES',r:'Fine for now. Small storm chance later. Keep an eye out.'};
       if(sc<=25)return{v:'YES',r:'Go. Enjoy it. No excuses.'};
       if(sc<=50)return{v:'MAYBE',r:"Could be fine, could be annoying. You'll manage."};
       return{v:'NO',r:"The weather has opinions. Unpleasant ones. Stay in."};},
-    sum(sc,ab){if(ab?.storm)return'It is actively storming. The bad meter reflects current conditions.';if(ab?.rain)return sc>25?'Raining now, more weather possible. Eyes open.':'Raining right now. Otherwise not terrible.';if(sc<=20)return'Nothing to worry about. Touch some grass.';if(sc<=44)return'Some things to note, nothing dramatic.';if(sc<=60)return'The weather has opinions today. Worth watching.';if(sc<=80)return'Okay, this is a bit much. Take it seriously.';return'The weather is not playing around. Be careful.';},
+    sum(sc,ab){if(ab?.storm)return'It is actively storming. The bad meter reflects current conditions.';if(ab?.rain)return sc>25?'Raining now, more weather possible. Eyes open.':'Raining right now. Otherwise not terrible.';if(sc<=20)return'Nothing to worry about. Go outside if you want.';if(sc<=44)return'Some things to note, nothing dramatic.';if(sc<=60)return'The weather has opinions today. Worth watching.';if(sc<=80)return'Okay, this is a bit much. Take it seriously.';return'The weather is not playing around. Be careful.';},
     kit(sc,p,w,sn){const i=[];if(sn)i.push('ice scraper');if(p>=50)i.push('umbrella');if(w>=25)i.push('windproof jacket');if(sc>=50)i.push('weather radio');if(sc>=65)i.push('emergency kit');if(!i.length)i.push("nothing extra — you're good");return'Grab: '+i.join(', ')+'.';},
   },
   unhinged:{
@@ -1065,12 +1074,12 @@ const T={
       if(ab.snow)return{v:'NO',r:'Snow or sleet is falling RIGHT NOW. Outside is hostile territory.'};
       if(ab.rain)return{v:'MAYBE?',r:"It's raining RIGHT NOW. If you go out you WILL get wet. Take the umbrella."};
       if(ir==='high')return{v:'MAYBE?',r:'Fine RIGHT NOW but storms are COMING this afternoon. The sky is lying to you. Have a plan.'};
-      if(ir==='moderate')return{v:'YES?',r:'Currently fine!! Scattered storm chance later. Classic atmosphere deception. Go but watch radar.'};
+      if(ir==='moderate')return{v:'YES?',r:'Fine right now!! Small storm chance lurking nearby. Classic atmosphere deception. Watch radar.'};
       if(sc<=25)return{v:'YES!!!',r:"GET OUT THERE. What are you waiting for?? Go touch grass."};
       if(sc<=40)return{v:'SURE?',r:"Probably fine. Check the alerts first. You've got this. Maybe."};
       if(sc<=65)return{v:'MAYBE NOT',r:"The weather has unpleasant opinions. Proceed with caution."};
       return{v:'STAY IN',r:"The weather is actively unwell today. This is NOT the day. Stay home."};},
-    sum(sc,ab){if(ab?.storm)return'IT IS STORMING. This number reflects that. Go inside.';if(ab?.rain)return sc>25?"It's raining AND there's more weather coming. Good luck.":"It's raining right now. The score reflects it. Adjust accordingly.";if(sc<=20)return'Honestly? The weather is being really normal today. No notes.';if(sc<=44)return"Minor stuff happening. Nothing catastrophic. Yet.";if(sc<=60)return"OK so the weather has some opinions today. Worth keeping an eye on.";if(sc<=80)return"Alright, this is actually a lot. PLEASE take this seriously.";return"OK THIS IS A LOT. The weather is fully unhinged. PLEASE be careful.";},
+    sum(sc,ab){if(ab?.storm)return'IT IS STORMING. This number reflects that. Go inside.';if(ab?.rain)return sc>25?"It's raining AND there's more weather coming. Good luck.":"It's raining right now. The score reflects it. Adjust accordingly.";if(sc<=20)return'The weather is being SUSPICIOUSLY normal. Touch some grass while you can.';if(sc<=44)return"Minor stuff happening. Nothing catastrophic. Yet.";if(sc<=60)return"OK so the weather has some opinions today. Worth keeping an eye on.";if(sc<=80)return"Alright, this is actually a lot. PLEASE take this seriously.";return"OK THIS IS A LOT. The weather is fully unhinged. PLEASE be careful.";},
     kit(sc,p,w,sn){const i=[];if(sn)i.push('ice scraper (and good luck)');if(p>=50)i.push('umbrella (hold it tight)');if(w>=25)i.push('windproof jacket (essential)');if(sc>=50)i.push('WEATHER RADIO (get one now)');if(sc>=65)i.push('FULL EMERGENCY KIT (not joking)');if(!i.length)i.push("literally nothing. You're set. Amazing.");return'GET: '+i.join(', ')+'.';},
   }
 };
@@ -1176,7 +1185,8 @@ function renderHome(){
       if(ab.storm){stormVal='Active Now';stormSub='Active thunderstorm. Stay inside.';stormLvl='danger';}
       else if(_th2&&_lk2){stormVal='Likely';stormSub='Storms are likely. Check alerts.';stormLvl='danger';}
       else if(_th2&&_ch2){stormVal='Possible';stormSub='Storm chance this period. Keep an eye out.';stormLvl='warn';}
-      else if(_th2&&_sl2){stormVal='Slight chance';stormSub='Low storm chance. Probably fine.';stormLvl='ok';}
+      else if(_th2&&pf<20){stormVal='Tiny chance';stormSub='Very low storm chance. Probably fine.';stormLvl='ok';}
+      else if(_th2&&_sl2){stormVal='Small chance';stormSub='Low storm chance. Probably fine.';stormLvl='ok';}
       else if(_th2){stormVal='Expected';stormSub='Thunderstorms expected. Monitor conditions.';stormLvl='danger';}
       else{stormVal='Unlikely';stormSub='No storm activity expected.';stormLvl='ok';}
       return{id:'storm',ico:'⛈️',lbl:'Storms',val:stormVal,sub:stormSub,full:stormSub,level:stormLvl,autoHide:!ab.storm&&!_th2};
@@ -1201,7 +1211,11 @@ function renderHome(){
         kitTxt='Warm layers, boots, and watch for ice.';
       } else {
         kitVal=sc>=50?'Prep up':"You're good";
-        kitTxt=t.kit(sc,pf,wf,sn);
+        // Smart fallback: suggest water if humid and no other kit
+        const _baseKit=t.kit(sc,pf,wf,sn);
+        const _noExtras=_baseKit.includes('nothing')||_baseKit.includes("you're good")||_baseKit.includes("You're set");
+        kitTxt=_noExtras&&_dew!=null&&_dew>=65?'Grab water if you're outside for a while. Humid today.':_baseKit;
+        if(_noExtras&&tf>=90)kitTxt='Grab water. Sunscreen too — it's hot.';
       }
       return{id:'kit',ico:'🎒',lbl:'What You Need',val:kitVal,sub:kitTxt,full:kitTxt,level:ab.storm?'danger':ab.rain||ab.snow?'warn':sc>=65?'danger':sc>=35?'warn':'ok'};
     })(),
@@ -1355,7 +1369,9 @@ function renderHourly(){
     const _likelyH=sfl.includes('likely')||(!sfl.includes('chance')&&_hasThunderH);
     const storm=_hasThunderH;
     // Storm label varies by confidence
-    const stormLbl=_slightH?'⚡ Storm possible':_chanceH?'⛈️ Storm possible':_likelyH?'⛈️ Storm likely':'⛈️ Storm expected';
+    // Tier by precip %: <20=tiny, 20-35=small, 35-50=possible, 50+=likely
+    const _stormTier=pf<20?'tiny':pf<35?'small':pf<50?'possible':'likely';
+    const stormLbl=_stormTier==='tiny'?'⚡ Tiny storm chance':_stormTier==='small'?'⚡ Small storm chance':_stormTier==='possible'?'⛈️ Storm possible':'⛈️ Storms likely';
     const snow=sfl.includes('snow')||sfl.includes('sleet')||sfl.includes('ice');
     const rain=sfl.includes('rain')||sfl.includes('shower')||sfl.includes('drizzle');
     // Get gust from gridRaw by matching time index
@@ -1384,7 +1400,7 @@ function renderHourly(){
       <div class="hr-tags">
         ${tags.map(tg=>`<div class="hr-tag">${tg}</div>`).join('')}
         <div class="hr-tag hr-cond">${sf.length>28?sf.slice(0,28)+'…':sf}</div>
-        ${storm?`<div class="hr-alert" style="color:${_slightH?'var(--yellow)':_chanceH?'var(--yellow)':'var(--red)'}">${S.tone==='unhinged'&&_likelyH?'⛈️ STORM LIKELY':''}${S.tone==='unhinged'&&!_likelyH?'⚡ maybe storms??':''}${S.tone!=='unhinged'?stormLbl:''}</div>`:''}
+        ${storm?`<div class="hr-alert" style="color:${_stormTier==='likely'?'var(--red)':'var(--yellow)'}">${S.tone==='unhinged'?(_stormTier==='likely'?'⛈️ STORMS LIKELY':_stormTier==='possible'?'⛈️ Storm possible':'⚡ maybe storms??'):stormLbl}</div>`:''}
       </div>
     </div>`;
   });
