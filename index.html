@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TERSE Weather</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -414,7 +415,35 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 .err-title{font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--red);margin-bottom:7px;}
 .err-body{font-size:13px;color:var(--text2);}
 .hidden{display:none!important;}
+
+/* ─── RADAR TAB ─────────────────────────────────────────── */
+#screen-radar{overflow-y:auto;}
+#radar-inner{padding:0;}
+#radar-map-wrap{position:relative;width:100%;height:42vmax;min-height:200px;max-height:340px;}
+#radar-map{width:100%;height:100%;}
+.radar-map-badge{position:absolute;top:8px;left:8px;z-index:600;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);border-radius:8px;padding:4px 10px;font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;color:#fff;letter-spacing:0.5px;pointer-events:none;}
+.radar-controls{padding:12px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--glass-border);}
+.rv-play-btn{background:var(--accent);border:none;border-radius:9px;width:36px;height:36px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity 0.15s;color:#000;font-weight:700;}
+.rv-play-btn:hover{opacity:0.82;}
+.rv-scrubber{flex:1;display:flex;flex-direction:column;gap:4px;}
+.rv-bar{height:5px;background:var(--glass);border-radius:3px;overflow:hidden;cursor:pointer;}
+.rv-bar-fill{height:100%;background:var(--accent);border-radius:3px;width:0%;transition:width 0.12s linear;}
+.rv-time{font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;color:var(--text2);}
+.radar-toggles{display:flex;gap:7px;flex-shrink:0;}
+.rv-tog{background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;transition:background 0.15s,color 0.15s,border-color 0.15s;white-space:nowrap;}
+.rv-tog.on{background:var(--accent);border-color:var(--accent);color:#000;}
+.radar-info{padding:14px;}
+.radar-info-title{font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:10px;}
+.radar-alerts-list{display:flex;flex-direction:column;gap:7px;}
+.radar-alert-row{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius-sm);}
+.radar-alert-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+.radar-alert-name{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:var(--text);}
+.radar-alert-sub{font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text3);margin-top:1px;}
+.radar-no-alerts{font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text3);padding:6px 0;}
+.leaflet-container{font-family:'DM Sans',sans-serif!important;}
+.leaflet-control-attribution{font-size:9px!important;opacity:0.5;}
 </style>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body data-ui="storm">
 <div class="bg"><div class="orb"></div><div class="orb"></div><div class="orb"></div></div>
@@ -495,6 +524,7 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
         <button class="sn-btn" id="sn-hourly" onclick="switchTab('hourly')"><span class="sn-ico">🕐</span>Hourly</button>
         <button class="sn-btn" id="sn-future" onclick="switchTab('future')"><span class="sn-ico">📅</span>Future</button>
         <div class="sn-div"></div>
+        <button class="sn-btn" id="sn-radar" onclick="switchTab('radar')"><span class="sn-ico">🛰️</span>Radar</button>
         <button class="sn-btn" id="sn-settings" onclick="switchTab('settings')"><span class="sn-ico">⚙️</span>Settings</button>
       </div>
       <div class="glass sb-meter" id="sb-meter" style="display:none">
@@ -521,6 +551,7 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
         <div id="fp-full" class="fpanel"></div>
       </div>
       <div id="screen-settings" class="screen"><div class="fade-in" id="stg-inner"></div></div>
+      <div id="screen-radar" class="screen"><div id="radar-inner"></div></div>
     </div>
   </div>
 
@@ -537,6 +568,7 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
     <button class="nav-btn" id="nav-warnings" onclick="switchTab('warnings')"><div class="nav-ico">⚠️</div><div>Alerts</div><div class="nav-dot"></div></button>
     <button class="nav-btn" id="nav-hourly" onclick="switchTab('hourly')"><div class="nav-ico">🕐</div><div>Hourly</div><div class="nav-dot"></div></button>
     <button class="nav-btn" id="nav-future" onclick="switchTab('future')"><div class="nav-ico">📅</div><div>Future</div><div class="nav-dot"></div></button>
+    <button class="nav-btn" id="nav-radar" onclick="switchTab('radar')"><div class="nav-ico">🛰️</div><div>Radar</div><div class="nav-dot"></div></button>
     <button class="nav-btn" id="nav-settings" onclick="switchTab('settings')"><div class="nav-ico">⚙️</div><div>Settings</div><div class="nav-dot"></div></button>
   </nav>
 </div>
@@ -744,7 +776,7 @@ function fmtHr(dateStr){
 }
 
 // ─── NAV ─────────────────────────────────────────────────────
-const TABS=['home','warnings','hourly','future','settings'];
+const TABS=['home','warnings','hourly','future','radar','settings'];
 function switchTab(t){
   TABS.forEach(x=>{
     document.getElementById('screen-'+x)?.classList.toggle('active',x===t);
@@ -752,6 +784,7 @@ function switchTab(t){
     document.getElementById('sn-'+x)?.classList.toggle('active',x===t);
   });
   if(t==='settings')buildSettings();
+  if(t==='radar')initRadar();
   if(t==='future'){const gp=document.getElementById('fp-graph');if(gp?.classList.contains('active')&&S.loaded)renderGraphs();}
 }
 const _fRendered={};
@@ -846,6 +879,187 @@ async function doGeo(errId){
   });
 }
 function setErr(id,msg){const el=document.getElementById(id||'land-err');if(el)el.textContent=msg;}
+
+
+// ─── RADAR ───────────────────────────────────────────────────
+let _rMap=null,_rInited=false,_rFrames=[],_rIdx=0,_rTimer=null,_rPlaying=false;
+let _rPrecip=null,_rAlerts=null,_rWind=null,_rWindOn=false,_rAlertsOn=true;
+
+function initRadar(){
+  const inner=document.getElementById('radar-inner');
+  if(!inner)return;
+  if(_rInited){setTimeout(()=>{if(_rMap)_rMap.invalidateSize();},250);return;}
+  _rInited=true;
+
+  const isDark=document.body.getAttribute('data-ui')!=='sky';
+  const tile=isDark
+    ?'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    :'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+  inner.innerHTML=
+    '<div id="radar-map-wrap">'+
+      '<div id="radar-map"></div>'+
+      '<div class="radar-map-badge" id="rv-badge">LIVE RADAR</div>'+
+    '</div>'+
+    '<div class="radar-controls">'+
+      '<button class="rv-play-btn" id="rv-play" onclick="rTogglePlay()">▶</button>'+
+      '<div class="rv-scrubber">'+
+        '<div class="rv-bar" id="rv-bar" onclick="rBarClick(event)"><div class="rv-bar-fill" id="rv-fill"></div></div>'+
+        '<div class="rv-time" id="rv-time">Loading...</div>'+
+      '</div>'+
+      '<div class="radar-toggles">'+
+        '<button class="rv-tog on" id="rv-atog" onclick="rToggleAlerts()">⚠️ Alerts</button>'+
+        '<button class="rv-tog" id="rv-wtog" onclick="rToggleWind()">💨 Wind</button>'+
+      '</div>'+
+    '</div>'+
+    '<div class="radar-info">'+
+      '<div class="radar-info-title">Active Alerts</div>'+
+      '<div id="rv-alerts-panel">'+rBuildAlertsHTML()+'</div>'+
+    '</div>';
+
+  setTimeout(()=>{
+    _rMap=L.map('radar-map',{zoomControl:true,attributionControl:true}).setView([S.lat||38.5,S.lon||-96],7);
+    L.tileLayer(tile,{maxZoom:18,subdomains:'abcd'}).addTo(_rMap);
+    if(S.lat&&S.lon){
+      L.circleMarker([S.lat,S.lon],{radius:6,fillColor:'#fff',fillOpacity:1,color:getComputedStyle(document.body).getPropertyValue('--accent').trim()||'#818cf8',weight:3}).addTo(_rMap).bindPopup(S.name||'Your Location');
+    }
+    rBuildAlertPolygons();
+    rLoadFrames();
+  },80);
+}
+
+function rBuildAlertsHTML(){
+  if(!S.alerts||!S.alerts.length)return'<div class="radar-no-alerts">No active alerts for your area.</div>';
+  return S.alerts.slice(0,5).map(a=>{
+    const ev=a.properties?.event||'Weather Alert';
+    const hl=a.properties?.headline||'';
+    const scope=a._scope==='polygon'?'Your area':'County/region';
+    const col=rAlertColor(ev);
+    return'<div class="radar-alert-row">'+
+      '<div class="radar-alert-dot" style="background:'+col+'"></div>'+
+      '<div><div class="radar-alert-name">'+ev+'</div>'+
+      '<div class="radar-alert-sub">'+scope+(hl?(' · '+hl.slice(0,80)+(hl.length>80?'…':'')):'')+'</div></div>'+
+    '</div>';
+  }).join('')+(S.alerts.length>5?'<div class="radar-no-alerts" style="margin-top:6px;">+'+( S.alerts.length-5)+' more alerts</div>':'');
+}
+
+function rAlertColor(event){
+  const e=(event||'').toLowerCase();
+  if(e.includes('tornado'))return'#f87171';
+  if(e.includes('thunder')||e.includes('severe'))return'#fb923c';
+  if(e.includes('snow')||e.includes('blizzard')||e.includes('ice')||e.includes('winter'))return'#93c5fd';
+  if(e.includes('flood'))return'#4ade80';
+  if(e.includes('wind'))return'#fbbf24';
+  return'#c084fc';
+}
+
+function rBuildAlertPolygons(){
+  if(!_rMap||!S.alerts||!S.alerts.length)return;
+  if(_rAlerts){_rMap.removeLayer(_rAlerts);_rAlerts=null;}
+  const layers=[];
+  S.alerts.forEach(a=>{
+    if(!a.geometry)return;
+    const col=rAlertColor(a.properties?.event||'');
+    try{
+      layers.push(L.geoJSON(a.geometry,{
+        style:{color:col,weight:2,fillColor:col,fillOpacity:0.15,opacity:0.9},
+        onEachFeature:(_,lyr)=>lyr.bindPopup('<strong>'+(a.properties?.event||'Alert')+'</strong><br><small>'+(a.properties?.headline||'').slice(0,120)+'</small>')
+      }));
+    }catch(e){}
+  });
+  if(layers.length)_rAlerts=L.layerGroup(layers).addTo(_rMap);
+}
+
+async function rLoadFrames(){
+  const badge=document.getElementById('rv-badge');
+  const timeEl=document.getElementById('rv-time');
+  try{
+    const r=await fetch('https://api.rainviewer.com/public/weather-maps.json');
+    const d=await r.json();
+    _rFrames=(d.radar?.past||[]).concat(d.radar?.nowcast||[]);
+    if(!_rFrames.length){if(timeEl)timeEl.textContent='No frames available';return;}
+    if(badge)badge.textContent='LIVE RADAR';
+    rShowFrame(_rFrames.length-1);
+    rPlay();
+  }catch(e){
+    if(timeEl)timeEl.textContent='Radar unavailable';
+    if(badge)badge.textContent='OFFLINE';
+  }
+}
+
+function rShowFrame(idx){
+  if(!_rFrames.length||!_rMap)return;
+  idx=((idx%_rFrames.length)+_rFrames.length)%_rFrames.length;
+  _rIdx=idx;
+  const frame=_rFrames[idx];
+  if(_rPrecip){_rMap.removeLayer(_rPrecip);}
+  _rPrecip=L.tileLayer(
+    'https://tilecache.rainviewer.com'+frame.path+'/256/{z}/{x}/{y}/2/1_1.png',
+    {opacity:0.75,maxZoom:18,tileSize:256,zIndex:200,errorTileUrl:''}
+  ).addTo(_rMap);
+  // Progress
+  const pct=((idx+1)/_rFrames.length)*100;
+  const fill=document.getElementById('rv-fill');
+  if(fill)fill.style.width=pct+'%';
+  // Time
+  const dt=new Date(frame.time*1000);
+  const hh=dt.getHours(),mm=String(dt.getMinutes()).padStart(2,'0');
+  const lbl=S.time12?(hh%12||12)+':'+mm+' '+(hh>=12?'PM':'AM'):String(hh).padStart(2,'0')+':'+mm;
+  const now=_rIdx===_rFrames.length-1?' · now':'';
+  const timeEl=document.getElementById('rv-time');
+  if(timeEl)timeEl.textContent=lbl+now;
+}
+
+function rPlay(){
+  _rPlaying=true;
+  const btn=document.getElementById('rv-play');
+  if(btn)btn.textContent='⏸';
+  _rTimer=setInterval(()=>{
+    const next=(_rIdx+1)%_rFrames.length;
+    rShowFrame(next);
+    if(next===_rFrames.length-1)clearInterval(_rTimer),_rTimer=setTimeout(()=>{if(_rPlaying){_rIdx=0;rPlay();}},1200);
+  },600);
+}
+
+function rPause(){
+  _rPlaying=false;
+  const btn=document.getElementById('rv-play');
+  if(btn)btn.textContent='▶';
+  clearInterval(_rTimer);clearTimeout(_rTimer);_rTimer=null;
+}
+
+function rTogglePlay(){_rPlaying?rPause():rPlay();}
+
+function rBarClick(e){
+  const bar=document.getElementById('rv-bar');
+  if(!bar||!_rFrames.length)return;
+  const pct=e.offsetX/bar.offsetWidth;
+  rPause();
+  rShowFrame(Math.round(pct*(_rFrames.length-1)));
+}
+
+function rToggleAlerts(){
+  _rAlertsOn=!_rAlertsOn;
+  const btn=document.getElementById('rv-atog');
+  if(btn)btn.classList.toggle('on',_rAlertsOn);
+  if(_rAlertsOn){rBuildAlertPolygons();}
+  else if(_rAlerts){_rMap.removeLayer(_rAlerts);_rAlerts=null;}
+}
+
+function rToggleWind(){
+  _rWindOn=!_rWindOn;
+  const btn=document.getElementById('rv-wtog');
+  if(btn)btn.classList.toggle('on',_rWindOn);
+  if(_rWindOn){
+    _rWind=L.tileLayer(
+      'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/sfc_wind/{z}/{x}/{y}.png',
+      {opacity:0.6,maxZoom:18,zIndex:300,errorTileUrl:''}
+    ).addTo(_rMap);
+  }else{
+    if(_rWind){_rMap.removeLayer(_rWind);_rWind=null;}
+  }
+}
+
 function toggleTersePage(){
   const pg=document.getElementById('terse-page');
   const logo=document.querySelector('.tb-logo');
