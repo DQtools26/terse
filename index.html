@@ -237,8 +237,8 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 .now-stmt-text{font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text2);margin-top:5px;line-height:1.5;}
 .now-stmt-dots{font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text3);margin-top:3px;letter-spacing:0.1px;}
 .now-sun{text-align:right;flex-shrink:0;}
-.now-sun-lbl{font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;color:var(--accent);white-space:nowrap;}
-.now-sun-times{font-family:'DM Sans',sans-serif;font-size:10px;color:var(--text3);white-space:nowrap;margin-top:2px;}
+.now-sun-lbl{font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:var(--accent);white-space:nowrap;}
+.now-sun-times{font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text3);white-space:nowrap;margin-top:3px;}
 .now-line{font-size:0.88rem;color:var(--text2);line-height:1.4;}
 .out-q{font-family:'Outfit',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;}
 .out-verdict{font-family:'Outfit',sans-serif;font-size:34px;font-weight:900;letter-spacing:-1px;line-height:1;}
@@ -605,7 +605,7 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
     <div class="sidebar">
       <div class="glass side-nav">
         <button class="sn-btn active" id="sn-home" onclick="switchTab('home')"><span class="sn-ico">🏠</span>Now</button>
-        <button class="sn-btn" id="sn-warnings" onclick="switchTab('warnings')"><span class="sn-ico">⚠️</span>Alerts</button>
+        <button class="sn-btn" id="sn-warnings" onclick="switchTab('warnings')"><span class="sn-ico">⚠️</span>Upcoming</button>
         <button class="sn-btn" id="sn-hourly" onclick="switchTab('hourly')"><span class="sn-ico">🕐</span>Hourly</button>
         <button class="sn-btn" id="sn-future" onclick="switchTab('future')"><span class="sn-ico">📅</span>Week</button>
         <div class="sn-div"></div>
@@ -650,7 +650,7 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
     <button class="nav-btn active" id="nav-home" onclick="switchTab('home')"><div class="nav-ico">🌡️</div><div>Now</div><div class="nav-dot"></div></button>
-    <button class="nav-btn" id="nav-warnings" onclick="switchTab('warnings')"><div class="nav-ico">⚠️</div><div>Alerts</div><div class="nav-dot"></div></button>
+    <button class="nav-btn" id="nav-warnings" onclick="switchTab('warnings')"><div class="nav-ico">⚠️</div><div>Upcoming</div><div class="nav-dot"></div></button>
     <button class="nav-btn" id="nav-hourly" onclick="switchTab('hourly')"><div class="nav-ico">🕐</div><div>Hourly</div><div class="nav-dot"></div></button>
     <button class="nav-btn" id="nav-future" onclick="switchTab('future')"><div class="nav-ico">📅</div><div>Week</div><div class="nav-dot"></div></button>
     <button class="nav-btn" id="nav-radar" onclick="switchTab('radar')"><div class="nav-ico">🛰️</div><div>Radar</div><div class="nav-dot"></div></button>
@@ -2004,31 +2004,22 @@ function buildNowCard(ico,tf,nLine,sunSt){
   const sub=extras.slice(0,2).join(' · ');
 
   // Heads-up chips
-  const chips=_buildHUChips();
-  const chipsHTML=chips.length
-    ?`<div class="hu-hdr" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--glass-border);">
-        <span class="hu-title">⚠ Heads up</span>
-        <button class="hu-hide-btn" onclick="toggleHU()">${_huHidden?'Show':'Hide'}</button>
-      </div>
-      ${_huHidden?'':`<div class="hu-strip" style="margin-top:6px;">${chips.map(ch=>`<div class="hu-chip ${ch.cls}">${ch.ico} ${ch.txt}</div>`).join('')}</div>`}`
-    :'';
-
   return`<div class="glass now-card">
     <div class="now-card-top">
       <div class="now-ico">${ico}</div>
       <div class="now-card-body">
         <div class="now-temp">${fmt(tf)}</div>
         <div class="now-stmt-text">${(()=>{
+          const t=tone();
+          // Condition phrase — only add cloudWord if it doesn't contradict sky
+          const condIsWeather=sky!==cloudWord&&sky!==sh(cur);
+          const showCloud=cloudWord&&!condIsWeather&&cloudWord.toLowerCase()!==sky.toLowerCase();
           const parts=[];
           if(sky)parts.push(sky.toLowerCase());
-          if(cloudWord&&sky!==cloudWord)parts.push(cloudWord.toLowerCase());
-          if(tf>=95)parts.push('extremely hot');
-          else if(tf>=85)parts.push('hot');
-          else if(tf>=72)parts.push('warm');
-          else if(tf>=55)parts.push('comfortable');
-          else if(tf>=40)parts.push('cool');
-          else if(tf>=32)parts.push('cold');
-          else parts.push('freezing');
+          if(showCloud)parts.push(cloudWord.toLowerCase());
+          // Tone-aware temp feel — pull from T engine, strip trailing period
+          const tFeel=t.tL(tf).replace(/[.!]+$/,'').toLowerCase();
+          parts.push(tFeel);
           if(wf>=25)parts.push('very windy');
           else if(wf>=15)parts.push('breezy');
           if(parts.length===1)return'It\'s '+parts[0]+'.';
@@ -2042,7 +2033,6 @@ function buildNowCard(ico,tf,nLine,sunSt){
         <div class="now-sun-times">${sunSt.rise?'↑'+fmtSun(sunSt.rise):''} ${sunSt.set?'↓'+fmtSun(sunSt.set):''}</div>
       </div>`:''}
     </div>
-    ${chipsHTML}
   </div>`;
 }
 
@@ -2333,9 +2323,17 @@ function buildHeadsUp(){
 // ─── WARNINGS ────────────────────────────────────────────────
 function renderWarnings(){
   const al=S.alerts||[];
+  // Build heads-up chips section
+  const huChips=_buildHUChips();
+  const huSection=huChips.length
+    ?`<div style="margin-bottom:14px;">
+        <div class="radar-info-title" style="margin-bottom:8px;">⚡ Heads Up</div>
+        <div class="hu-strip">${huChips.map(ch=>`<div class="hu-chip ${ch.cls}">${ch.ico} ${ch.txt}</div>`).join('')}</div>
+      </div>`
+    :'';
   if(!al.length){
     const m={calm:'No active NWS alerts for your area.',terse:'No alerts. The weather is being normal.',unhinged:'No active alerts! The sky is behaving itself for once! Suspicious.'};
-    document.getElementById('warn-inner').innerHTML=`<div class="all-clear fade-in"><div class="ac-icon">✅</div><div class="ac-title">All Clear</div><div class="ac-sub">${m[S.tone]||m.terse}</div></div>`;
+    document.getElementById('warn-inner').innerHTML=`<div class="fade-in">${huSection}<div class="all-clear"><div class="ac-icon">✅</div><div class="ac-title">All Clear</div><div class="ac-sub">${m[S.tone]||m.terse}</div></div></div>`;
     return;
   }
   const _polyAlerts=al.filter(a=>a._scope==='polygon');
@@ -2374,7 +2372,7 @@ function renderWarnings(){
     </div>`;
   });
   h+='</div>';
-  document.getElementById('warn-inner').innerHTML=h;
+  document.getElementById('warn-inner').innerHTML='<div class="fade-in">'+huSection+h+'</div>';
 }
 function xlateAlert(evt){
   const e=evt.toLowerCase(),tn=S.tone;
