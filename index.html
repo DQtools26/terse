@@ -26,6 +26,7 @@
 [data-ui="sky"]    { --bg-a:#c7dcf7; --bg-b:#ddd6fe; --bg-c:#bae6fd; --accent:#4f46e5; --accent2:#7c3aed; --glass:rgba(255,255,255,0.45); --glass-border:rgba(255,255,255,0.7); --glass-strong:rgba(255,255,255,0.55); --glass-hover:rgba(255,255,255,0.65); --text:#1e1b4b; --text2:rgba(30,27,75,0.65); --text3:rgba(30,27,75,0.38); }
 [data-ui="sunset"] { --bg-a:#1a0430; --bg-b:#7c1d6f; --bg-c:#c2410c; --accent:#fb923c; --accent2:#f472b6; }
 [data-ui="forest"]  { --bg-a:#0a1a0e; --bg-b:#14381c; --bg-c:#0d2b14; --accent:#4ade80; --accent2:#86efac; }
+[data-ui="ocean"]   { --bg-a:#020d18; --bg-b:#0a2233; --bg-c:#0e3347; --accent:#22d3ee; --accent2:#67e8f9; }
 
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflow-x:hidden;font-size:15px;line-height:1.5;}
@@ -73,6 +74,7 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 .th-dot[data-t="sky"]{background:linear-gradient(135deg,#c7dcf7,#ddd6fe);color:#1e1b4b;}
 .th-dot[data-t="sunset"]{background:linear-gradient(135deg,#1a0430,#c2410c);}
 .th-dot[data-t="forest"]{background:linear-gradient(135deg,#0a1a0e,#14381c);}
+.th-dot[data-t="ocean"]{background:linear-gradient(135deg,#020d18,#0e3347);}
 
 /* WELCOME MODAL */
 .wm-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);}
@@ -227,14 +229,16 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 .bm-total-val{font-family:'Outfit',sans-serif;font-size:20px;font-weight:900;letter-spacing:-0.5px;}
 
 .out-card{padding:18px 20px;margin-bottom:12px;}
-.now-strip{display:flex;align-items:center;gap:14px;padding:14px 18px;margin-bottom:12px;}
-.now-sun{margin-left:auto;text-align:right;flex-shrink:0;}
-.now-sun-ico{font-size:18px;line-height:1;}
-.now-sun-lbl{font-size:11px;font-weight:600;color:var(--accent);white-space:nowrap;margin-top:1px;}
-.now-sun-times{font-size:10px;color:var(--text3);white-space:nowrap;margin-top:1px;}
-.now-ico{font-size:2.4rem;line-height:1;flex-shrink:0;}
-.now-body{display:flex;flex-direction:column;gap:2px;}
-.now-temp{font-size:1.5rem;font-weight:700;color:var(--text1);line-height:1;}
+.now-card{padding:16px 18px 14px;margin-bottom:10px;}
+.now-card-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:10px;}
+.now-ico{font-size:2.8rem;line-height:1;flex-shrink:0;margin-top:2px;}
+.now-card-body{flex:1;min-width:0;}
+.now-temp{font-family:'Outfit',sans-serif;font-size:2rem;font-weight:900;color:var(--text);line-height:1;letter-spacing:-1px;}
+.now-stmt-text{font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text2);margin-top:5px;line-height:1.5;}
+.now-stmt-dots{font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text3);margin-top:3px;letter-spacing:0.1px;}
+.now-sun{text-align:right;flex-shrink:0;}
+.now-sun-lbl{font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;color:var(--accent);white-space:nowrap;}
+.now-sun-times{font-family:'DM Sans',sans-serif;font-size:10px;color:var(--text3);white-space:nowrap;margin-top:2px;}
 .now-line{font-size:0.88rem;color:var(--text2);line-height:1.4;}
 .out-q{font-family:'Outfit',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;}
 .out-verdict{font-family:'Outfit',sans-serif;font-size:34px;font-weight:900;letter-spacing:-1px;line-height:1;}
@@ -267,6 +271,7 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 [data-ui="sky"] .drawer-sheet{background:#d8e8fc;}
 [data-ui="sunset"] .drawer-sheet{background:#1a0430;}
 [data-ui="forest"] .drawer-sheet{background:#0a1a0e;}
+[data-ui="ocean"] .drawer-sheet{background:#020d18;}
 @keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
 .drawer-handle{width:36px;height:4px;border-radius:2px;background:var(--glass-border);margin:0 auto 20px;}
 .drawer-close{position:absolute;top:16px;right:18px;background:var(--glass);border:1px solid var(--glass-border);border-radius:50%;width:30px;height:30px;cursor:pointer;color:var(--text2);font-size:15px;display:flex;align-items:center;justify-content:center;}
@@ -384,6 +389,7 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 .ui-card[data-t="sky"]{background:linear-gradient(135deg,#c7dcf7,#ddd6fe,#4f46e5 220%);}
 .ui-card[data-t="sunset"]{background:linear-gradient(135deg,#1a0430,#7c1d6f,#fb923c 190%);}
 .ui-card[data-t="forest"]{background:linear-gradient(135deg,#0a1a0e,#14381c,#4ade80 200%);}
+.ui-card[data-t="ocean"]{background:linear-gradient(135deg,#020d18,#0a2233,#22d3ee 210%);}
 .ui-name{font-family:'Outfit',sans-serif;font-size:11px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);letter-spacing:0.05em;}
 [data-t="sky"] .ui-name{color:#1e1b4b;text-shadow:none;}
 
@@ -397,6 +403,7 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 [data-ui="sky"] .lm-sheet{background:#c7dcf7;}
 [data-ui="sunset"] .lm-sheet{background:#1a0430;}
 [data-ui="forest"] .lm-sheet{background:#0a1a0e;}
+[data-ui="ocean"] .lm-sheet{background:#020d18;}
 .lm-handle{width:36px;height:4px;border-radius:2px;background:var(--glass-border);margin:0 auto 18px;}
 .lm-title{font-family:'Outfit',sans-serif;font-size:20px;font-weight:900;margin-bottom:14px;}
 
@@ -442,6 +449,84 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 .radar-no-alerts{font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text3);padding:6px 0;}
 .leaflet-container{font-family:'DM Sans',sans-serif!important;}
 .leaflet-control-attribution{font-size:9px!important;opacity:0.5;}
+
+/* ─── HEADS-UP CHIPS ─────────────────────────────────────── */
+.hu-strip{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;}
+.hu-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:20px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;border:1px solid transparent;cursor:default;white-space:nowrap;}
+.hu-chip.warn{background:rgba(251,146,60,0.15);border-color:rgba(251,146,60,0.35);color:#fb923c;}
+.hu-chip.rain{background:rgba(96,165,250,0.15);border-color:rgba(96,165,250,0.35);color:#60a5fa;}
+.hu-chip.snow{background:rgba(147,197,253,0.15);border-color:rgba(147,197,253,0.35);color:#93c5fd;}
+.hu-chip.heat{background:rgba(248,113,113,0.15);border-color:rgba(248,113,113,0.35);color:#f87171;}
+.hu-chip.cold{background:rgba(129,140,248,0.15);border-color:rgba(129,140,248,0.35);color:#818cf8;}
+.hu-chip.storm{background:rgba(251,146,60,0.2);border-color:rgba(251,146,60,0.5);color:#fb923c;font-weight:700;}
+[data-ui="sky"] .hu-chip.rain{background:rgba(37,99,235,0.1);border-color:rgba(37,99,235,0.3);color:#1d4ed8;}
+[data-ui="sky"] .hu-chip.warn{background:rgba(234,88,12,0.1);border-color:rgba(234,88,12,0.3);color:#ea580c;}
+
+/* ─── HOME MINI-TABS ─────────────────────────────────────── */
+.home-tabs{display:flex;gap:0;border-bottom:1px solid var(--glass-border);margin-bottom:14px;}
+.home-tab-btn{flex:1;padding:9px 0;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;background:none;border:none;border-bottom:2px solid transparent;color:var(--text3);cursor:pointer;transition:color 0.15s,border-color 0.15s;letter-spacing:0.02em;}
+.home-tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+.home-tab-pane{display:none;}.home-tab-pane.active{display:block;}
+
+/* ─── ACTIVITY MODES ─────────────────────────────────────── */
+.act-overlay{position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.55);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.22s;}
+.act-overlay.open{opacity:1;pointer-events:all;}
+.act-sheet{position:relative;z-index:1;width:100%;max-width:500px;background:var(--bg-a,#0b0e1c);border:1px solid var(--glass-border);border-radius:24px 24px 0 0;padding:20px 20px 52px;animation:slideUp 0.28s cubic-bezier(0.4,0,0.2,1);}
+[data-ui="sky"] .act-sheet{background:#d8e8fc;}
+[data-ui="sunset"] .act-sheet{background:#1a0430;}
+[data-ui="forest"] .act-sheet{background:#0a1a0e;}
+[data-ui="ocean"] .act-sheet{background:#020d18;}
+.act-handle{width:36px;height:4px;background:var(--glass-border);border-radius:2px;margin:0 auto 16px;}
+.act-title{font-family:'Outfit',sans-serif;font-size:17px;font-weight:800;color:var(--text);margin-bottom:4px;}
+.act-sub{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text3);margin-bottom:16px;}
+.act-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+.act-btn{background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:14px 8px;cursor:pointer;text-align:center;transition:background 0.15s,border-color 0.15s,transform 0.1s;}
+.act-btn:hover{background:var(--glass-hover);transform:scale(1.03);}
+.act-btn.active{background:rgba(var(--accent-rgb,130,140,248),0.18);border-color:var(--accent);}
+.act-ico{font-size:26px;display:block;margin-bottom:6px;}
+.act-lbl{font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;color:var(--text2);}
+.act-result{background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:14px 16px;margin-top:4px;}
+.act-verdict{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.act-verdict-ico{font-size:28px;flex-shrink:0;}
+.act-verdict-text{font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--text);line-height:1.25;}
+.act-verdict-sub{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text2);margin-top:2px;font-weight:400;}
+.act-tips{display:flex;flex-direction:column;gap:7px;margin-top:10px;}
+.act-tip{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text2);padding-left:16px;position:relative;line-height:1.4;}
+.act-tip::before{content:'→';position:absolute;left:0;color:var(--accent);font-weight:700;}
+.act-close{position:absolute;top:16px;right:16px;background:var(--glass);border:1px solid var(--glass-border);border-radius:9px;width:32px;height:32px;cursor:pointer;color:var(--text);font-size:15px;display:flex;align-items:center;justify-content:center;}
+
+/* ─── ACTIVITY LAUNCH BUTTON ─────────────────────────────── */
+.act-launch-btn{width:100%;background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:11px 16px;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:background 0.2s,color 0.2s;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.act-launch-btn:hover{background:var(--glass-hover);color:var(--text);}
+
+/* ─── REDESIGN: BAD METER BIGGER ─────────────────────────── */
+.bm-score{font-size:72px;font-weight:900;line-height:1;letter-spacing:-3px;}
+.bm-pct{font-size:28px;letter-spacing:0;vertical-align:super;font-weight:700;}
+.bm-vibe{font-size:16px;font-weight:700;margin-top:-2px;}
+.bm-top{display:flex;align-items:flex-end;gap:14px;margin:6px 0 8px;}
+
+/* ─── REDESIGN: WEEK TAB ─────────────────────────────────── */
+.wk-day{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--glass-border);}
+.wk-day:last-child{border-bottom:none;}
+.wk-name{font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:var(--text);width:36px;flex-shrink:0;}
+.wk-ico{font-size:20px;width:28px;text-align:center;flex-shrink:0;}
+.wk-desc{font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.wk-temps{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.wk-hi{font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;color:var(--text);}
+.wk-lo{font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;color:var(--text3);}
+.wk-bar-wrap{width:60px;height:5px;background:var(--glass);border-radius:3px;flex-shrink:0;}
+.wk-bar-fill{height:100%;border-radius:3px;background:var(--accent);}
+.wk-pct{font-family:'DM Sans',sans-serif;font-size:11px;color:var(--text3);width:28px;text-align:right;flex-shrink:0;}
+
+/* ─── NOW STATEMENT ─────────────────────────────────────────── */
+
+
+/* ─── HIDEABLE HEADS-UP ──────────────────────────────────── */
+.hu-wrap{margin-bottom:10px;}
+.hu-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.hu-title{font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);}
+.hu-hide-btn{background:none;border:none;font-family:'DM Sans',sans-serif;font-size:11px;color:var(--text3);cursor:pointer;padding:2px 4px;}
+.hu-hide-btn:hover{color:var(--text2);}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
@@ -522,7 +607,7 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
         <button class="sn-btn active" id="sn-home" onclick="switchTab('home')"><span class="sn-ico">🏠</span>Now</button>
         <button class="sn-btn" id="sn-warnings" onclick="switchTab('warnings')"><span class="sn-ico">⚠️</span>Alerts</button>
         <button class="sn-btn" id="sn-hourly" onclick="switchTab('hourly')"><span class="sn-ico">🕐</span>Hourly</button>
-        <button class="sn-btn" id="sn-future" onclick="switchTab('future')"><span class="sn-ico">📅</span>Future</button>
+        <button class="sn-btn" id="sn-future" onclick="switchTab('future')"><span class="sn-ico">📅</span>Week</button>
         <div class="sn-div"></div>
         <button class="sn-btn" id="sn-radar" onclick="switchTab('radar')"><span class="sn-ico">🛰️</span>Radar</button>
         <button class="sn-btn" id="sn-settings" onclick="switchTab('settings')"><span class="sn-ico">⚙️</span>Settings</button>
@@ -564,10 +649,10 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
-    <button class="nav-btn active" id="nav-home" onclick="switchTab('home')"><div class="nav-ico">🏠</div><div>Now</div><div class="nav-dot"></div></button>
+    <button class="nav-btn active" id="nav-home" onclick="switchTab('home')"><div class="nav-ico">🌡️</div><div>Now</div><div class="nav-dot"></div></button>
     <button class="nav-btn" id="nav-warnings" onclick="switchTab('warnings')"><div class="nav-ico">⚠️</div><div>Alerts</div><div class="nav-dot"></div></button>
     <button class="nav-btn" id="nav-hourly" onclick="switchTab('hourly')"><div class="nav-ico">🕐</div><div>Hourly</div><div class="nav-dot"></div></button>
-    <button class="nav-btn" id="nav-future" onclick="switchTab('future')"><div class="nav-ico">📅</div><div>Future</div><div class="nav-dot"></div></button>
+    <button class="nav-btn" id="nav-future" onclick="switchTab('future')"><div class="nav-ico">📅</div><div>Week</div><div class="nav-dot"></div></button>
     <button class="nav-btn" id="nav-radar" onclick="switchTab('radar')"><div class="nav-ico">🛰️</div><div>Radar</div><div class="nav-dot"></div></button>
     <button class="nav-btn" id="nav-settings" onclick="switchTab('settings')"><div class="nav-ico">⚙️</div><div>Settings</div><div class="nav-dot"></div></button>
   </nav>
@@ -605,14 +690,14 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 const S = {
   lat:null,lon:null,name:'',
   ui:'storm',tone:'terse',units:'F',sharp:false,time12:true,windMph:true,welcomed:false,lastFetched:null,
-  saved:[],showHidden:false,
+  saved:[],showHidden:false,homeSplit:false,
   notifs:false,dailyNotif:false,
   gridId:null,gridX:null,gridY:null,zone:null,
   forecast:null,hourly:null,alerts:null,gridRaw:null,
   loaded:false,
 };
-function load(){try{const d=JSON.parse(localStorage.getItem('tw3')||'{}');['lat','lon','name','ui','tone','units','sharp','time12','windMph','welcomed','saved','notifs','dailyNotif','gridId','gridX','gridY','zone'].forEach(k=>{if(d[k]!==undefined)S[k]=d[k];});}catch(e){}}
-function save(){localStorage.setItem('tw3',JSON.stringify({lat:S.lat,lon:S.lon,name:S.name,ui:S.ui,tone:S.tone,units:S.units,sharp:S.sharp,time12:S.time12,windMph:S.windMph,welcomed:S.welcomed,saved:S.saved,notifs:S.notifs,dailyNotif:S.dailyNotif,gridId:S.gridId,gridX:S.gridX,gridY:S.gridY,zone:S.zone}));}
+function load(){try{const d=JSON.parse(localStorage.getItem('tw3')||'{}');['lat','lon','name','ui','tone','units','sharp','time12','windMph','welcomed','saved','notifs','dailyNotif','gridId','gridX','gridY','zone','homeSplit'].forEach(k=>{if(d[k]!==undefined)S[k]=d[k];});}catch(e){}}
+function save(){localStorage.setItem('tw3',JSON.stringify({lat:S.lat,lon:S.lon,name:S.name,ui:S.ui,tone:S.tone,units:S.units,sharp:S.sharp,time12:S.time12,windMph:S.windMph,welcomed:S.welcomed,saved:S.saved,notifs:S.notifs,dailyNotif:S.dailyNotif,gridId:S.gridId,gridX:S.gridX,gridY:S.gridY,zone:S.zone,homeSplit:S.homeSplit}));}
 load();
 
 // ─── BOOT ────────────────────────────────────────────────────
@@ -670,10 +755,12 @@ function fmtSun(date){
   return date.toLocaleString('en-US',{hour:'numeric',minute:'2-digit',hour12:S.time12});
 }
 function sunStatus(lat,lon){
-  // Returns {rise, set, isDay, minsToEvent, eventLabel}
   const now=new Date();
-  const today=sunTimes(lat,lon,now);
-  const tomorrow=sunTimes(lat,lon,new Date(now.getTime()+86400000));
+  // Anchor to local noon to avoid UTC day-boundary mismatches (e.g. 7pm CDT = midnight UTC)
+  const localNoon=new Date(now);
+  localNoon.setHours(12,0,0,0);
+  const today=sunTimes(lat,lon,localNoon);
+  const tomorrow=sunTimes(lat,lon,new Date(localNoon.getTime()+86400000));
   if(!today.rise)return{isDay:today.alwaysUp,rise:null,set:null,label:today.alwaysUp?'Midnight sun':'Polar night'};
   const isDay=now>=today.rise&&now<today.set;
   const nextEvent=isDay?today.set:now<today.rise?today.rise:tomorrow.rise;
@@ -918,8 +1005,11 @@ function initRadar(){
     '</div>';
 
   setTimeout(()=>{
-    _rMap=L.map('radar-map',{zoomControl:true,attributionControl:true}).setView([S.lat||38.5,S.lon||-96],7);
-    L.tileLayer(tile,{maxZoom:18,subdomains:'abcd'}).addTo(_rMap);
+    _rMap=L.map('radar-map',{zoomControl:true,attributionControl:true,maxZoom:10}).setView([S.lat||38.5,S.lon||-96],7);
+    // CartoDB Voyager — clean, readable at radar zoom levels
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+      maxZoom:10,subdomains:'abcd',attribution:'© OpenStreetMap © CARTO'
+    }).addTo(_rMap);
     if(S.lat&&S.lon){
       L.circleMarker([S.lat,S.lon],{radius:6,fillColor:'#fff',fillOpacity:1,color:getComputedStyle(document.body).getPropertyValue('--accent').trim()||'#818cf8',weight:3}).addTo(_rMap).bindPopup(S.name||'Your Location');
     }
@@ -992,11 +1082,17 @@ function rShowFrame(idx){
   idx=((idx%_rFrames.length)+_rFrames.length)%_rFrames.length;
   _rIdx=idx;
   const frame=_rFrames[idx];
-  if(_rPrecip){_rMap.removeLayer(_rPrecip);}
+  const oldLayer=_rPrecip;
   _rPrecip=L.tileLayer(
     'https://tilecache.rainviewer.com'+frame.path+'/256/{z}/{x}/{y}/2/1_1.png',
-    {opacity:0.75,maxZoom:18,tileSize:256,zIndex:200,errorTileUrl:''}
+    {opacity:0,maxZoom:10,tileSize:256,zIndex:200,errorTileUrl:''}
   ).addTo(_rMap);
+  _rPrecip.once('load',()=>{
+    _rPrecip.setOpacity(0.75);
+    if(oldLayer)_rMap.removeLayer(oldLayer);
+  });
+  // Fallback: remove old layer after 800ms even if tiles didn't all load
+  setTimeout(()=>{if(oldLayer&&_rMap.hasLayer(oldLayer))_rMap.removeLayer(oldLayer);},800);
   // Progress
   const pct=((idx+1)/_rFrames.length)*100;
   const fill=document.getElementById('rv-fill');
@@ -1340,9 +1436,13 @@ async function fetchWeather(){
     alertsPT.forEach(a=>{a._scope='polygon';});
     const seen=new Set();
     S.alerts=[...alertsA,...alertsB,...alertsPT].filter(a=>{
-      const id=a.id||a.properties?.id||JSON.stringify(a.properties?.event)+a.properties?.onset;
-      if(seen.has(id))return false;
-      seen.add(id);
+      // Normalize: strip trailing version suffix (e.g. NWS-IDP-PROD-123-456 vs ...456.1)
+      const rawId=a.id||a.properties?.id||'';
+      const normId=rawId.replace(/\.\d+$/,'').trim();
+      const fallback=(a.properties?.event||'')+'|'+(a.properties?.onset||'')+'|'+(a.properties?.expires||'');
+      const key=normId||fallback;
+      if(seen.has(key))return false;
+      seen.add(key);
       return true;
     });
     // Sort: most severe first so UI always leads with worst alert
@@ -1641,6 +1741,7 @@ function renderAll(){
 // ─── HOME ─────────────────────────────────────────────────────
 let _chips={};
 function renderHome(){
+  if(S.homeSplit){renderHomeSplit();return;}
   const cur=getCur()||getDay();
   if(!cur){document.getElementById('home-inner').innerHTML='<div style="padding:40px;text-align:center;color:var(--text2)">No weather data.</div>';return;}
   const t=tone();
@@ -1798,18 +1899,7 @@ function renderHome(){
         </div>
       </div>
     </div>
-    <div class="glass now-strip">
-      <div class="now-ico">${_nIco}</div>
-      <div class="now-body">
-        <div class="now-temp">${fmt(tf)}</div>
-        <div class="now-line">${_nLine}</div>
-      </div>
-      <div class="now-sun">
-        <div class="now-sun-ico">${_sunSt.isDay?'🌅':'🌄'}</div>
-        <div class="now-sun-lbl">${_sunSt.label||''}</div>
-        <div class="now-sun-times">${_sunSt.rise?'↑'+fmtSun(_sunSt.rise):''} ${_sunSt.set?'↓'+fmtSun(_sunSt.set):''}</div>
-      </div>
-    </div>
+    ${buildNowCard(_nIco,tf,_nLine,_sunSt)}
     <div class="glass-sm out-card">
       <div class="out-q">Should I go outside?</div>
       <div class="out-verdict" style="color:${sc<=25?'var(--green)':sc<=50?'var(--yellow)':'var(--red)'}">${out.v}</div>
@@ -1829,6 +1919,7 @@ function renderHome(){
         <div class="chip-sub">${(c.sub||'').length>55?(c.sub||'').slice(0,55)+'…':(c.sub||'')}</div>
       </div>`).join('')}
     </div>
+    <button class="act-launch-btn" onclick="openActivity()">🎯 How's it for running? Driving? Hiking?</button>
     <div class="foot">National Weather Service · Tap any card for details</div>
   </div>`;
   updateAmbChip();
@@ -1843,6 +1934,401 @@ function openDrawer(id){
   document.getElementById('drawer').classList.add('open');
 }
 function closeDrawer(){document.getElementById('drawer').classList.remove('open');}
+
+// ─── HIDEABLE HEADS-UP ───────────────────────────────────────
+let _huHidden=false;
+function toggleHU(){_huHidden=!_huHidden;renderHome();}
+function buildHeadsUpHideable(){
+  const chips=_buildHUChips();
+  if(!chips.length)return'';
+  return`<div class="hu-wrap">
+    <div class="hu-hdr">
+      <span class="hu-title">⚠ Heads up</span>
+      <button class="hu-hide-btn" onclick="toggleHU()">${_huHidden?'Show':'Hide'}</button>
+    </div>
+    ${_huHidden?'':`<div class="hu-strip">${chips.map(ch=>`<div class="hu-chip ${ch.cls}">${ch.ico} ${ch.txt}</div>`).join('')}</div>`}
+  </div>`;
+}
+
+
+// ─── NOW CARD ────────────────────────────────────────────────
+function buildNowCard(ico,tf,nLine,sunSt){
+  const cur=getCur()||getDay();
+  if(!cur)return'';
+  const sf=sh(cur).toLowerCase();
+  const wf=wSpd(cur);
+  const pf=prec(cur);
+  const ab=isActivelyBad();
+  const ir=typeof calcIR==='function'?calcIR():'low';
+
+  // Cloud cover from gridRaw
+  const _grSkyCov=grMap((S.gridRaw||{}).skyCover);
+  const cloudPct=_grSkyCov!=null?_grSkyCov:null;
+  let cloudWord='';
+  if(cloudPct!=null){
+    if(cloudPct>=90)cloudWord='Overcast';
+    else if(cloudPct>=70)cloudWord='Mostly cloudy';
+    else if(cloudPct>=40)cloudWord='Partly cloudy';
+    else if(cloudPct>=15)cloudWord='Mostly clear';
+    else cloudWord='Clear';
+  }
+  // Condition sentence
+  let sky='';
+  if(sf.includes('tornado'))sky='Tornado possible';
+  else if(sf.includes('thunder')||sf.includes('t-storm'))sky='Thunderstorms right now';
+  else if(sf.includes('blizzard'))sky='Blizzard in progress';
+  else if(sf.includes('heavy snow'))sky='Snowing heavily';
+  else if(sf.includes('snow')&&!sf.includes('chance')&&!sf.includes('slight'))sky='Snowing';
+  else if(sf.includes('freezing rain')||sf.includes('sleet'))sky='Freezing rain and sleet';
+  else if(sf.includes('heavy rain'))sky='Raining hard';
+  else if(sf.includes('rain')&&!sf.includes('chance')&&!sf.includes('slight'))sky='Raining';
+  else if(sf.includes('drizzle'))sky='Light drizzle';
+  else if(sf.includes('shower'))sky='Showers moving through';
+  else if(sf.includes('fog')||sf.includes('mist'))sky='Foggy';
+  else sky=cloudWord||sh(cur);
+
+
+  // Secondary notes
+  const extras=[];
+  if(wf>=25)extras.push('Winds '+wf+'mph');
+  else if(wf>=15)extras.push('Breezy at '+wf+'mph');
+  if(ab.thunder&&!sf.includes('thunder'))extras.push('Lightning active nearby');
+  if(ir==='high'&&!ab.thunder)extras.push('Storms likely later');
+  else if(ir==='moderate'&&pf>=40)extras.push('Storm chance later');
+  else if(pf>=60&&!ab.rain)extras.push('Heavy rain likely later');
+  else if(pf>=30&&!ab.rain)extras.push('Rain possible later');
+  if(S.alerts&&S.alerts.length>0){
+    const ev=S.alerts[0].properties?.event||'Weather Alert';
+    extras.push('Active: '+ev);
+  }
+  const sub=extras.slice(0,2).join(' · ');
+
+  // Heads-up chips
+  const chips=_buildHUChips();
+  const chipsHTML=chips.length
+    ?`<div class="hu-hdr" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--glass-border);">
+        <span class="hu-title">⚠ Heads up</span>
+        <button class="hu-hide-btn" onclick="toggleHU()">${_huHidden?'Show':'Hide'}</button>
+      </div>
+      ${_huHidden?'':`<div class="hu-strip" style="margin-top:6px;">${chips.map(ch=>`<div class="hu-chip ${ch.cls}">${ch.ico} ${ch.txt}</div>`).join('')}</div>`}`
+    :'';
+
+  return`<div class="glass now-card">
+    <div class="now-card-top">
+      <div class="now-ico">${ico}</div>
+      <div class="now-card-body">
+        <div class="now-temp">${fmt(tf)}</div>
+        <div class="now-stmt-text">${(()=>{
+          const parts=[];
+          if(sky)parts.push(sky.toLowerCase());
+          if(cloudWord&&sky!==cloudWord)parts.push(cloudWord.toLowerCase());
+          if(tf>=95)parts.push('extremely hot');
+          else if(tf>=85)parts.push('hot');
+          else if(tf>=72)parts.push('warm');
+          else if(tf>=55)parts.push('comfortable');
+          else if(tf>=40)parts.push('cool');
+          else if(tf>=32)parts.push('cold');
+          else parts.push('freezing');
+          if(wf>=25)parts.push('very windy');
+          else if(wf>=15)parts.push('breezy');
+          if(parts.length===1)return'It\'s '+parts[0]+'.';
+          if(parts.length===2)return'It\'s '+parts[0]+' and '+parts[1]+'.';
+          return'It\'s '+parts.slice(0,-1).join(', ')+', and '+parts[parts.length-1]+'.';
+        })()}</div>
+        ${sub?`<div class="now-stmt-dots">${sub}</div>`:''}
+      </div>
+      ${sunSt.label?`<div class="now-sun">
+        <div class="now-sun-lbl">${sunSt.label}</div>
+        <div class="now-sun-times">${sunSt.rise?'↑'+fmtSun(sunSt.rise):''} ${sunSt.set?'↓'+fmtSun(sunSt.set):''}</div>
+      </div>`:''}
+    </div>
+    ${chipsHTML}
+  </div>`;
+}
+
+// ─── ACTIVITY MODES ──────────────────────────────────────────
+const ACTIVITIES=[
+  {id:'run',    ico:'🏃', lbl:'Run'},
+  {id:'drive',  ico:'🚗', lbl:'Drive'},
+  {id:'hike',   ico:'🥾', lbl:'Hike'},
+  {id:'bike',   ico:'🚴', lbl:'Bike'},
+  {id:'fly',    ico:'✈️', lbl:'Fly'},
+  {id:'outside',ico:'🧑‍💼', lbl:'Work Outside'},
+];
+let _actSel=null;
+
+function openActivity(){
+  const ov=document.getElementById('act-overlay');
+  if(!ov)return;
+  _actSel=null;
+  document.getElementById('act-result').innerHTML='';
+  const grid=document.getElementById('act-grid');
+  grid.innerHTML=ACTIVITIES.map(a=>`<button class="act-btn" data-id="${a.id}" onclick="selectActivity('${a.id}')"><span class="act-ico">${a.ico}</span><span class="act-lbl">${a.lbl}</span></button>`).join('');
+  ov.classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeActivity(e){
+  if(e&&e.target!==document.getElementById('act-overlay'))return;
+  _closeActivity();
+}
+function closeActivityBtn(){_closeActivity();}
+function _closeActivity(){
+  const ov=document.getElementById('act-overlay');
+  if(ov)ov.classList.remove('open');
+  document.body.style.overflow='';
+}
+
+function selectActivity(id){
+  _actSel=id;
+  document.querySelectorAll('.act-btn').forEach(b=>b.classList.toggle('active',b.dataset.id===id));
+  document.getElementById('act-result').innerHTML=buildActivityResult(id);
+}
+
+function buildActivityResult(id){
+  if(!S.forecast||!S.hourly)return'<div class="act-result"><div class="act-verdict-text">No weather data loaded.</div></div>';
+  const cur=getCur()||getDay();
+  const hp=S.hourly?.periods||[];
+  const tf=tF(cur);
+  const wf=wSpd(cur);
+  const pf=prec(cur);
+  const sf=sh(cur).toLowerCase();
+  const {score:sc}=calcBad();
+  const ab=isActivelyBad();
+  const t=tone();
+  const hasAlerts=S.alerts&&S.alerts.length>0;
+
+  // Per-activity logic
+  const defs={
+    run:{
+      go: sc<=25&&!ab.rain&&!ab.snow&&tf>=30&&tf<=90&&wf<20,
+      caution: sc<=50&&tf>=20&&tf<=100&&wf<30,
+      factors:[
+        tf<40?'Cold — layers up, watch for ice':tf>85?'Heat advisory: hydrate well, go early':'Temperature is fine for running',
+        wf>=20?'Sustained winds '+wf+'mph — expect resistance':wf>=10?'Breezy':'Wind is low',
+        pf>=50?'High rain chance — you\'re getting wet':pf>=20?'Some precip chance — check hourly':'Dry out there',
+        ab.thunder?'⚡ Lightning risk — do not run outside':'No storm risk',
+        hasAlerts?'Active weather alerts in your area':'No active alerts',
+      ]
+    },
+    drive:{
+      go: !ab.snow&&!ab.ice&&wf<40&&sc<=60,
+      caution: sc<=75&&!ab.ice,
+      factors:[
+        ab.snow?'Snow on roads — allow extra time, slow down':ab.rain?'Wet roads — increase following distance':'Roads look clear',
+        wf>=35?'High winds '+wf+'mph — large vehicles at risk':wf>=20?'Moderate winds':'Wind not a concern',
+        (sf.includes('fog')||sf.includes('mist'))?'Reduced visibility — use low beams':'Visibility should be fine',
+        ab.ice?'⚠️ Freezing precip — roads may be icy. Drive cautiously or stay home':'No ice risk',
+        hasAlerts?'Active NWS alerts — check before driving':'No alerts',
+      ]
+    },
+    hike:{
+      go: sc<=30&&tf>=35&&tf<=95&&!ab.thunder&&wf<25,
+      caution: sc<=55&&tf>=25&&tf<=100&&wf<40,
+      factors:[
+        tf<35?'Near-freezing temps — full cold-weather gear':tf>90?'Very hot — start early, bring extra water':'Temps are hike-able',
+        ab.thunder?'⚡ Lightning likely — avoid ridges and exposed areas entirely':'No lightning risk',
+        pf>=40?'Significant precip chance — trails may be muddy or dangerous':pf>=20?'Light precip possible':'Dry conditions for trails',
+        wf>=25?'Strong winds at elevation could be worse than ground level':'Wind manageable',
+        hasAlerts?'Check alerts before heading out — conditions may change':'All clear on alerts',
+      ]
+    },
+    bike:{
+      go: sc<=25&&!ab.rain&&tf>=35&&tf<=95&&wf<18,
+      caution: sc<=50&&tf>=25&&wf<30,
+      factors:[
+        wf>=18?'Headwind/crosswind at '+wf+'mph — factor in extra time and effort':wf>=10?'Light wind — manageable':'Wind is low, great for riding',
+        ab.rain?'Wet roads and reduced visibility — risky on a bike':pf>=30?'Rain possible — consider rain gear':'Dry conditions',
+        tf<35?'Near-freezing — numb hands, watch for ice patches':tf>90?'Very hot — bring extra water, go early':'Temperature fine for cycling',
+        ab.thunder?'⚡ Do not bike in lightning':'No lightning risk',
+        (sf.includes('fog'))?'Foggy — use lights, wear bright colors':'Visibility is good',
+      ]
+    },
+    fly:{
+      go: sc<=20&&wf<25&&!ab.thunder&&pf<30,
+      caution: sc<=45&&wf<40&&!ab.thunder,
+      factors:[
+        ab.thunder?'⚡ Thunderstorms likely — expect delays or cancellations':sf.includes('storm')?'Storm activity in area — check with airline':'No storm activity near your location',
+        wf>=30?'High surface winds '+wf+'mph — possible turbulence and ground delays':wf>=15?'Moderate winds, minor turbulence possible':'Light winds',
+        (sf.includes('fog')||sf.includes('mist'))?'Fog possible — can cause ground stops and delays':'Visibility looks clear',
+        pf>=50?'Heavy precip likely — check your flight status':'Low precip chance',
+        hasAlerts?'Active alerts — check flight status before heading to airport':'No alerts in area',
+      ]
+    },
+    outside:{
+      go: sc<=30&&tf>=40&&tf<=90&&!ab.rain&&!ab.thunder,
+      caution: sc<=55&&tf>=25&&tf<=100,
+      factors:[
+        tf>=95?'Extreme heat — mandatory shade breaks, hydrate constantly':tf>=85?'Hot — water, sunscreen, take breaks':tf<=32?'Freezing — full layers, watch for frost and ice':tf<=45?'Cold — dress in layers':'Temperature is workable outside',
+        ab.thunder?'⚡ Lightning risk — get indoors immediately if you hear thunder':'No lightning risk',
+        wf>=25?'Gusty winds '+wf+'mph — secure loose equipment and materials':wf>=15?'Breezy but manageable':'Calm wind conditions',
+        ab.rain?'Currently raining — wet gear and slippery surfaces':pf>=50?'High rain chance — have shelter ready':'Low rain risk',
+        hasAlerts?'Active NWS alerts — check conditions frequently':'No weather alerts',
+      ]
+    },
+  };
+
+  const def=defs[id];
+  if(!def)return'';
+  const isGo=def.go;
+  const isCaution=!isGo&&def.caution;
+  const isNo=!isGo&&!isCaution;
+
+  const verdictIco=isGo?'✅':isCaution?'⚠️':'🚫';
+  const verdictTxt=isGo
+    ?(t==='unhinged'?'Yeah go for it, weather\'s fine.':t==='calm'?'Conditions are favorable.':'Good to go.')
+    :isCaution
+    ?(t==='unhinged'?'Ehh. Could be worse. Could be better.':t==='calm'?'Proceed with caution — some concerns.':'Proceed with caution.')
+    :(t==='unhinged'?'Yeah no. Stay inside.':t==='calm'?'Conditions are not favorable for this activity.':'Not recommended right now.');
+  const verdictSub=isGo?'No major concerns for this activity.':isCaution?'Manageable, but watch a few things.':'Weather poses real risk for this activity.';
+
+  return`<div class="act-result">
+    <div class="act-verdict">
+      <div class="act-verdict-ico">${verdictIco}</div>
+      <div><div class="act-verdict-text">${verdictTxt}</div><div class="act-verdict-sub">${verdictSub}</div></div>
+    </div>
+    <div class="act-tips">${def.factors.map(f=>`<div class="act-tip">${f}</div>`).join('')}</div>
+  </div>`;
+}
+
+// ─── HOME SPLIT MODE ─────────────────────────────────────────
+let _homeTab='now';
+function switchHomeTab(t){
+  _homeTab=t;
+  document.querySelectorAll('.home-tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
+  document.querySelectorAll('.home-tab-pane').forEach(p=>p.classList.toggle('active',p.dataset.tab===t));
+}
+function renderHomeSplit(){
+  const el=document.getElementById('home-inner');
+  if(!el)return;
+  // Render full home HTML into a temp div, then split it
+  // "Now" = bad meter + condition chips (first ~half)
+  // "Today" = heads-up + hourly preview + daily arc
+  const cur=getCur()||getDay();
+  if(!cur){el.innerHTML='<div style="padding:40px;text-align:center;color:var(--text2)">No weather data.</div>';return;}
+
+  // We'll call the normal render but wrap the output in tabs
+  // First render to a hidden scratch space, then redistribute
+  const t=tone();
+  const tf=tF(cur),wf=wSpd(cur),pf=prec(cur),sf=sh(cur).toLowerCase();
+  const {score:sc,lines:bmLines}=calcBad(),col=badCol(sc);
+  const ab=isActivelyBad();
+  const hu=buildHeadsUp();
+
+  // Build "today" arc from forecast periods
+  const periods=S.forecast?.periods||[];
+  const todayPeriods=periods.slice(0,4);
+  const arcHTML=todayPeriods.map(p=>{
+    const ptf=tF(p);
+    const psf=sh(p).toLowerCase();
+    const pico=psf.includes('sun')||psf.includes('clear')?'☀️':psf.includes('cloud')?'⛅':psf.includes('rain')||psf.includes('shower')?'🌧️':psf.includes('snow')?'❄️':psf.includes('thunder')?'⚡':'🌫️';
+    const nm=p.name;
+    return`<div style="flex:1;text-align:center;padding:10px 6px;background:var(--glass);border-radius:var(--radius-sm);">
+      <div style="font-size:20px">${pico}</div>
+      <div style="font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;color:var(--text3);margin-top:4px">${nm}</div>
+      <div style="font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;color:var(--text);margin-top:2px">${fmt(ptf)}</div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:11px;color:var(--text2);margin-top:2px">${prec(p)}%</div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML=`<div class="fade-in">
+    ${hu}
+    <div class="home-tabs">
+      <button class="home-tab-btn ${_homeTab==='now'?'active':''}" data-tab="now" onclick="switchHomeTab('now')">Now</button>
+      <button class="home-tab-btn ${_homeTab==='today'?'active':''}" data-tab="today" onclick="switchHomeTab('today')">Today</button>
+    </div>
+    <div class="home-tab-pane ${_homeTab==='now'?'active':''}" data-tab="now">
+      <div class="glass bm-card">
+        <div class="bm-lbl-row"><span class="bm-lbl">⚠️ Bad Meter</span><button class="bm-refresh" onclick="doRefresh()" title="Refresh">↻</button></div>
+        <div class="bm-top">
+          <div class="bm-score">${sc}<span class="bm-pct">%</span></div>
+          <div class="bm-vibe" style="color:${col}">${badLbl(sc)}</div>
+        </div>
+        <div class="bm-track"><div class="bm-fill" style="width:${sc}%;background-color:${col}"></div></div>
+        <div class="bm-summary">${t.sum(sc,ab)}</div>
+      </div>
+      <div style="margin-top:12px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text2);line-height:1.6;">
+        ${t.cL(sh(cur))||''} ${t.tL(tf)} ${wf>=10?t.wL(wf):''} ${pf>=20?t.rL(pf,sh(cur)):''}
+      </div>
+    </div>
+    <div class="home-tab-pane ${_homeTab==='today'?'active':''}" data-tab="today">
+      <div style="font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:10px;">Today at a glance</div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;">${arcHTML}</div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text2);line-height:1.7;">
+        ${periods[0]?.detailedForecast||''}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ─── HEADS-UP CHIPS ─────────────────────────────────────────
+function _buildHUChips(){
+  if(!S.forecast||!S.hourly)return'';
+  const chips=[];
+  const days=S.forecast.periods||[];
+  const hours=S.hourly.periods||[];
+  const now=new Date();
+  const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  // Scan next 12 hours for anything spicy
+  hours.slice(0,12).forEach(p=>{
+    const sf=sh(p).toLowerCase();
+    const pf=prec(p);
+    const tf=tF(p);
+    const dt=new Date(p.startTime);
+    const hr=dt.getHours();
+    const lbl=S.time12?(hr%12||12)+' '+(hr>=12?'PM':'AM'):String(hr).padStart(2,'0')+':00';
+    if((sf.includes('thunder')||sf.includes('t-storm'))&&pf>=40&&!chips.find(c=>c.id==='storm-today')){
+      chips.push({id:'storm-today',cls:'storm',ico:'⚡',txt:'Storm today ~'+lbl});
+    } else if(pf>=60&&(sf.includes('rain')||sf.includes('shower'))&&!chips.find(c=>c.id==='rain-today')){
+      chips.push({id:'rain-today',cls:'rain',ico:'🌧️',txt:'Rain today ~'+lbl});
+    } else if((sf.includes('snow')||sf.includes('flurr'))&&!chips.find(c=>c.id==='snow-today')){
+      chips.push({id:'snow-today',cls:'snow',ico:'❄️',txt:'Snow today ~'+lbl});
+    }
+    if(tf>=95&&!chips.find(c=>c.id==='heat')){
+      chips.push({id:'heat',cls:'heat',ico:'🔥',txt:'Heat advisory soon'});
+    } else if(tf<=20&&!chips.find(c=>c.id==='cold')){
+      chips.push({id:'cold',cls:'cold',ico:'🥶',txt:'Freezing temps soon'});
+    }
+  });
+
+  // Scan next 7 days for notable events not already covered
+  days.slice(2,14).forEach(p=>{
+    if(!p.isDaytime)return;
+    const sf=sh(p).toLowerCase();
+    const pf=prec(p);
+    const tf=tF(p);
+    const dt=new Date(p.startTime);
+    const dname=dayNames[dt.getDay()];
+    if((sf.includes('thunder')||sf.includes('t-storm'))&&pf>=40&&!chips.find(c=>c.id==='storm-'+dname)){
+      chips.push({id:'storm-'+dname,cls:'storm',ico:'⚡',txt:'Storm '+dname});
+    } else if(pf>=60&&(sf.includes('rain')||sf.includes('shower'))&&!chips.find(c=>c.id==='rain-'+dname)){
+      chips.push({id:'rain-'+dname,cls:'rain',ico:'🌧️',txt:'Rain '+dname});
+    } else if((sf.includes('snow')||sf.includes('blizz')||sf.includes('flurr'))&&!chips.find(c=>c.id==='snow-'+dname)){
+      chips.push({id:'snow-'+dname,cls:'snow',ico:'❄️',txt:'Snow '+dname});
+    }
+    if(tf>=100&&!chips.find(c=>c.id==='heat-'+dname)){
+      chips.push({id:'heat-'+dname,cls:'heat',ico:'🔥',txt:'Extreme heat '+dname});
+    } else if(tf<=15&&!chips.find(c=>c.id==='cold-'+dname)){
+      chips.push({id:'cold-'+dname,cls:'cold',ico:'🥶',txt:'Dangerously cold '+dname});
+    }
+  });
+
+  // Active warnings → chip
+  if(S.alerts&&S.alerts.length>0){
+    const top=S.alerts[0];
+    const ev=(top.properties?.event||'Alert');
+    const short=ev.replace(/\s?(Warning|Watch|Advisory)\s?/i,'').trim();
+    chips.unshift({id:'alert-top',cls:'warn',ico:'⚠️',txt:short+(ev.toLowerCase().includes('warning')?' Warning':ev.toLowerCase().includes('watch')?' Watch':' Advisory')});
+  }
+
+  return chips.slice(0,6);
+}
+function buildHeadsUp(){
+  const chips=_buildHUChips();
+  if(!chips.length)return'';
+  return'<div class="hu-strip">'+chips.map(ch=>`<div class="hu-chip ${ch.cls}">${ch.ico} ${ch.txt}</div>`).join('')+'</div>';
+}
 
 // ─── WARNINGS ────────────────────────────────────────────────
 function renderWarnings(){
@@ -2043,19 +2529,19 @@ function renderFutureSummary(){
       <div class="wk-chips">${wcs.map(c=>`<div class="wk-chip wkc-${c.t}">${c.tx}</div>`).join('')}</div>
       <div class="wk-impact">${imp.join(' · ')||'No major impacts expected.'}</div>
     </div>`;
+  h+=`<div class="glass" style="border-radius:var(--radius-sm);padding:4px 14px;margin-top:4px;">`;
   days.forEach(d=>{
-    const fw=Math.round(((d.high-minH)/rng)*80)+10;
-    h+=`<div class="day-row">
-      <div class="dr-name">${d.name}</div>
-      <div class="dr-ico">${d.ico}</div>
-      <div class="dr-bar">
-        <div class="dr-temps"><span class="dr-hi">${fmt(d.high)}</span><span class="dr-lo">${fmt(d.low)}</span></div>
-        <div class="dr-track"><div class="dr-fill" style="width:${fw}%"></div></div>
-        <div class="dr-note">${d.sf.length>36?d.sf.slice(0,36)+'…':d.sf}</div>
-      </div>
-      <div class="dr-prec" style="color:${d.prec>=60?'var(--red)':d.prec>=30?'var(--yellow)':'var(--text3)'}">${d.prec>5?d.prec+'%':''}</div>
+    const fw=Math.round(((d.high-minH)/rng)*100);
+    h+=`<div class="wk-day">
+      <div class="wk-name">${d.name}</div>
+      <div class="wk-ico">${d.ico}</div>
+      <div class="wk-desc">${d.sf.length>30?d.sf.slice(0,30)+'…':d.sf}</div>
+      <div class="wk-bar-wrap"><div class="wk-bar-fill" style="width:${fw}%"></div></div>
+      <div class="wk-temps"><span class="wk-hi">${fmt(d.high)}</span><span class="wk-lo">${fmt(d.low)}</span></div>
+      <div class="wk-pct" style="color:${d.prec>=60?'var(--accent)':d.prec>=30?'var(--text2)':'var(--text3)'}">${d.prec>5?d.prec+'%':''}</div>
     </div>`;
   });
+  h+=`</div>`;
   h+='</div>';
   document.getElementById('fp-summary').innerHTML=h;
 }
@@ -2206,6 +2692,7 @@ function buildSettings(){
         <div class="ui-card ${S.ui==='sky'?'active':''}" data-t="sky" onclick="setUI('sky')"><span class="ui-name">🌤 Sky</span></div>
         <div class="ui-card ${S.ui==='sunset'?'active':''}" data-t="sunset" onclick="setUI('sunset')"><span class="ui-name">🌅 Sunset</span></div>
         <div class="ui-card ${S.ui==='forest'?'active':''}" data-t="forest" onclick="setUI('forest')"><span class="ui-name">🌲 Forest</span></div>
+        <div class="ui-card ${S.ui==='ocean'?'active':''}" data-t="ocean" onclick="setUI('ocean')"><span class="ui-name">🌊 Ocean</span></div>
       </div>
     </div>
 
@@ -2215,6 +2702,7 @@ function buildSettings(){
       <div class="stg-row" style="margin-top:10px"><div class="sr-lbl">Time format</div><div class="seg"><button class="seg-b ${S.time12?'active':''}" onclick="setTime12(true);buildSettings()">12h</button><button class="seg-b ${!S.time12?'active':''}" onclick="setTime12(false);buildSettings()">24h</button></div></div>
       <div class="stg-row" style="margin-top:10px"><div class="sr-lbl">Wind units</div><div class="seg"><button class="seg-b ${S.windMph?'active':''}" onclick="setWindMph(true);buildSettings()">mph</button><button class="seg-b ${!S.windMph?'active':''}" onclick="setWindMph(false);buildSettings()">km/h</button></div></div>
       <div class="stg-row" style="margin-top:10px"><div><div class="sr-lbl">Sharp corners</div><div class="sr-sub">Removes rounded corners and orbs for a clean, flat look</div></div><button class="toggle ${S.sharp?'on':''}" onclick="setSharp(!S.sharp);buildSettings()"></button></div>
+      <div class="stg-row" style="margin-top:10px"><div><div class="sr-lbl">Split Now tab</div><div class="sr-sub">Splits home into Now / Today mini-tabs</div></div><button class="toggle ${S.homeSplit?'on':''}" onclick="S.homeSplit=!S.homeSplit;save();buildSettings();if(S.loaded)renderHome();"></button></div>
     </div>
     <div class="stg-group">
       <div class="stg-title">Notifications</div>
@@ -2255,5 +2743,16 @@ function openLM(){renderMSaved();document.getElementById('lm').classList.add('op
 function closeLM(){document.getElementById('lm').classList.remove('open');}
 </script>
   <div class="share-toast" id="share-toast">Copied to clipboard ✓</div>
+  <!-- ACTIVITY MODES -->
+  <div class="act-overlay" id="act-overlay" onclick="closeActivity(event)">
+    <div class="act-sheet" id="act-sheet">
+      <div class="act-handle"></div>
+      <button class="act-close" onclick="closeActivityBtn()">✕</button>
+      <div class="act-title">Activity Mode</div>
+      <div class="act-sub">What are you doing? I'll tell you if it's a good idea.</div>
+      <div class="act-grid" id="act-grid"></div>
+      <div id="act-result"></div>
+    </div>
+  </div>
 </body>
 </html>
