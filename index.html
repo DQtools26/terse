@@ -554,6 +554,27 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 .wk-day-comment{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);flex:1;line-height:1.4;}
 .wk-day-score{font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;flex-shrink:0;margin-left:auto;}
 .wk-day-sub{font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text3);padding-left:60px;line-height:1.4;}
+
+/* ─── BAD SCORE TOGGLE ───────────────────────────────────── */
+.bm-view-toggle{display:flex;gap:0;background:rgba(255,255,255,0.07);border-radius:10px;padding:3px;margin-left:auto;}
+.bm-view-btn{background:none;border:none;padding:4px 12px;border-radius:8px;font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;color:var(--text3);cursor:pointer;transition:all 0.15s;letter-spacing:0.5px;}
+.bm-view-btn.active{background:var(--accent);color:#000;}
+
+/* ─── OPTIMAL WINDOW + ACTIVITY CHIP ────────────────────── */
+.opt-chip{background:rgba(var(--accent-rgb,130,140,248),0.12);border:1px solid var(--accent);border-radius:10px;padding:9px 13px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background 0.15s;margin-bottom:8px;}
+.opt-chip:hover{background:rgba(var(--accent-rgb,130,140,248),0.2);}
+.opt-chip-ico{font-size:18px;flex-shrink:0;}
+.opt-chip-body{flex:1;}
+.opt-chip-title{font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;}
+.opt-chip-val{font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);margin-top:1px;font-weight:500;}
+.opt-chip-sub{font-family:'DM Sans',sans-serif;font-size:11px;color:var(--text3);margin-top:1px;}
+
+/* ─── SOURCE ATTRIBUTION ─────────────────────────────────── */
+.src-bar{font-family:'DM Sans',sans-serif;font-size:11px;color:var(--text3);padding:6px 0 2px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.src-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.src-dot.nws{background:#60a5fa;}
+.src-dot.om{background:#4ade80;}
+.src-dot.both{background:var(--accent);}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
@@ -717,7 +738,7 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 const S = {
   lat:null,lon:null,name:'',
   ui:'storm',tone:'terse',units:'F',sharp:false,time12:true,windMph:true,welcomed:false,lastFetched:null,
-  saved:[],showHidden:false,homeSplit:false,
+  saved:[],showHidden:false,homeSplit:false,omCur:null,omSource:'nws',
   notifs:false,dailyNotif:false,
   gridId:null,gridX:null,gridY:null,zone:null,
   forecast:null,hourly:null,alerts:null,gridRaw:null,
@@ -1513,6 +1534,8 @@ async function fetchWeather(){
     S.loaded=true;
     S.lastFetched=Date.now();
     Object.keys(_fRendered).forEach(k=>delete _fRendered[k]);
+    // Fetch Open-Meteo in parallel for cross-reference (non-blocking)
+    fetchOpenMeteo().catch(()=>{});
     renderAll();
   }catch(e){
     stopLoading();
@@ -1920,12 +1943,19 @@ function renderHome(){
 
   document.getElementById('home-inner').innerHTML=`<div class="fade-in">
     <div class="glass bm-card">
-      <div class="bm-lbl-row"><span class="bm-lbl">⚠️ Bad Meter</span><button class="bm-refresh" onclick="doRefresh()" title="Refresh">↻</button></div>
-      <div class="bm-top">
-        <div class="bm-score">${sc}<span class="bm-pct">%</span></div>
-        <div class="bm-vibe" style="color:${col}">${badLbl(sc)}</div>
+      <div class="bm-lbl-row">
+        <span class="bm-lbl">⚠️ Bad Meter</span>
+        <div class="bm-view-toggle">
+          <button class="bm-view-btn${_bmView==='now'?' active':''}" data-v="now" onclick="setBMView('now')">NOW</button>
+          <button class="bm-view-btn${_bmView==='today'?' active':''}" data-v="today" onclick="setBMView('today')">TODAY</button>
+        </div>
+        <button class="bm-refresh" onclick="doRefresh()" title="Refresh">↻</button>
       </div>
-      <div class="bm-track"><div class="bm-fill" style="width:${sc}%;background-color:${col}"></div></div>
+      <div class="bm-top">
+        <div class="bm-score"><span id="bm-score-val">${sc}</span><span class="bm-pct">%</span></div>
+        <div class="bm-vibe" id="bm-vibe-val" style="color:${col}">${badLbl(sc)}</div>
+      </div>
+      <div class="bm-track"><div class="bm-fill" id="bm-fill-bar" style="width:${sc}%;background-color:${col}"></div></div>
       <div class="bm-summary">${t.sum(sc,ab)}</div>
       <button class="bm-breakdown-btn" onclick="toggleBMBreakdown(this)">
         <span>▸</span><span>Why is it ${sc}%?</span>
@@ -1951,6 +1981,8 @@ function renderHome(){
       <div class="out-reason">${out.r}</div>
       ${ir!=='low'&&!ab.storm?`<div class="out-ir out-ir-${ir}">${ir==='high'?'⛈️ Storm likely later today':'🌦️ Isolated storm chance later'}</div>`:''}
     </div>
+    ${buildOptimalWindowChip()}
+    ${buildActivityChip()}
     ${(()=>{const hu=_buildHUChips();return hu.length?`<div class="hu-home-section"><div class="chips-lbl" style="margin-bottom:7px;">⚡ Heads Up</div><div class="hu-strip">${hu.map(ch=>`<div class="hu-chip ${ch.cls}">${ch.ico} ${ch.txt}</div>`).join('')}</div></div>`:'';})()}
     <div class="chips-hdr">
       <div class="chips-lbl">${wIco(sh(cur))} Right Now</div>
@@ -1965,6 +1997,7 @@ function renderHome(){
         <div class="chip-sub">${(c.sub||'').length>55?(c.sub||'').slice(0,55)+'…':(c.sub||'')}</div>
       </div>`).join('')}
     </div>
+    ${(()=>{const s=omSourceLabel();return`<div class="src-bar"><div class="src-dot ${s.dot}"></div>${s.txt}</div>`;})()}
     <div class="foot">National Weather Service · <button onclick="openActivity()" style="background:none;border:none;color:var(--accent);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;padding:0;">🎯 Activity Mode</button></div>
   </div>`;
   updateAmbChip();
@@ -2020,16 +2053,30 @@ function buildNowCard(ico,tf,nLine,sunSt){
   // sky = gerund/adjective phrase that fits "It's ___"
   // isPrecip = condition already implies clouds, skip cloudWord
   let sky='',isPrecip=false;
+  // Three-tier condition: active / possible / not happening
+  const hasThunder=sf.includes('thunder')||sf.includes('t-storm');
+  const hasRain=sf.includes('rain')||sf.includes('shower')||sf.includes('drizzle');
+  const hasSnow=sf.includes('snow')||sf.includes('blizzard')||sf.includes('sleet');
+  const isChance=sf.includes('slight chance')||sf.includes('isolated')||sf.includes('chance')||sf.includes('scattered');
+  // Active = high probability OR forecast says it's happening without "chance" qualifier
+  const stormActive=hasThunder&&!isChance&&pf>=45;
+  const stormPossible=hasThunder&&(isChance||pf<45)&&pf>=15;
+  const rainActive=hasRain&&!hasThunder&&!isChance&&pf>=40;
+  const rainPossible=hasRain&&!hasThunder&&(isChance||pf<40)&&pf>=15;
+  const snowActive=hasSnow&&!isChance;
+  const snowPossible=hasSnow&&isChance&&pf>=15;
+
   if(sf.includes('tornado')){sky='under tornado conditions';isPrecip=true;}
-  else if(sf.includes('thunder')||sf.includes('t-storm')){sky='storming';isPrecip=true;}
+  else if(stormActive){sky='storming';isPrecip=true;}
+  else if(stormPossible){sky='could storm';isPrecip=false;}
   else if(sf.includes('blizzard')){sky='a full blizzard out there';isPrecip=true;}
-  else if(sf.includes('heavy snow')){sky='snowing heavily';isPrecip=true;}
-  else if(sf.includes('snow')&&!sf.includes('chance')&&!sf.includes('slight')){sky='snowing';isPrecip=true;}
-  else if(sf.includes('freezing rain')||sf.includes('sleet')){sky='sleeting';isPrecip=true;}
-  else if(sf.includes('heavy rain')){sky='raining hard';isPrecip=true;}
-  else if(sf.includes('rain')&&!sf.includes('chance')&&!sf.includes('slight')){sky='raining';isPrecip=true;}
-  else if(sf.includes('drizzle')){sky='drizzling';isPrecip=true;}
-  else if(sf.includes('shower')){sky='showery';isPrecip=true;}
+  else if(sf.includes('heavy snow')&&snowActive){sky='snowing heavily';isPrecip=true;}
+  else if(snowActive){sky='snowing';isPrecip=true;}
+  else if(snowPossible){sky='snow possible';isPrecip=false;}
+  else if((sf.includes('freezing rain')||sf.includes('sleet'))&&pf>=30){sky='sleeting';isPrecip=true;}
+  else if(sf.includes('heavy rain')&&rainActive){sky='raining hard';isPrecip=true;}
+  else if(rainActive){sky='raining';isPrecip=true;}
+  else if(rainPossible){sky='could rain';isPrecip=false;}
   else if(sf.includes('fog')||sf.includes('mist')){sky='foggy';isPrecip=false;}
   else{sky=cloudWord||sh(cur).toLowerCase();isPrecip=false;}
 
@@ -2095,6 +2142,163 @@ function buildNowCard(ico,tf,nLine,sunSt){
         <div class="now-sun-times">${sunSt.rise?'↑'+fmtSun(sunSt.rise):''} ${sunSt.set?'↓'+fmtSun(sunSt.set):''}</div>
       </div>`:''}
     </div>
+  </div>`;
+}
+
+// ─── OPEN-METEO CROSS-REFERENCE ──────────────────────────────
+const OM_CODES={0:'Clear',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Foggy',51:'Drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Rain',63:'Rain',65:'Heavy rain',71:'Snow',73:'Snow',75:'Heavy snow',77:'Snow grains',80:'Showers',81:'Showers',82:'Heavy showers',85:'Snow showers',86:'Heavy snow showers',95:'Thunderstorm',96:'Thunderstorm',99:'Thunderstorm'};
+async function fetchOpenMeteo(){
+  if(!S.lat||!S.lon)return;
+  const url=`https://api.open-meteo.com/v1/forecast?latitude=${S.lat.toFixed(4)}&longitude=${S.lon.toFixed(4)}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,precipitation,cloud_cover,apparent_temperature&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`;
+  const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
+  if(!r.ok)return;
+  const d=await r.json();
+  const cur=d.current;
+  if(!cur)return;
+  S.omCur={
+    temp:cur.temperature_2m,
+    feelsLike:cur.apparent_temperature,
+    humidity:cur.relative_humidity_2m,
+    windMph:cur.wind_speed_10m,
+    precip:cur.precipitation,
+    cloudPct:cur.cloud_cover,
+    code:cur.weather_code,
+    condition:OM_CODES[cur.weather_code]||'Unknown',
+    isStorm:cur.weather_code>=95,
+    isRain:cur.weather_code>=51&&cur.weather_code<71,
+    isSnow:cur.weather_code>=71&&cur.weather_code<80,
+    isClear:cur.weather_code<=2,
+  };
+  // Determine source: NWS primary, but use Open-Meteo if it disagrees AND makes more sense
+  const nwsCur=getCur();
+  const nwsSf=nwsCur?sh(nwsCur).toLowerCase():'';
+  const nwsStorm=nwsSf.includes('thunder');
+  const nwsRain=nwsSf.includes('rain')||nwsSf.includes('shower');
+  // If NWS says storm but OM says clear AND precip is 0 → OM is more accurate
+  if(nwsStorm&&S.omCur.isClear&&S.omCur.precip===0){
+    S.omSource='open-meteo';
+  } else if(S.omCur.isStorm&&!nwsStorm){
+    // OM says storm, NWS doesn't — defer to NWS (forecast may know something OM doesn't)
+    S.omSource='nws';
+  } else {
+    S.omSource='both';
+  }
+  // Re-render now card if source changed
+  if(S.loaded)renderHome();
+}
+
+function omSourceLabel(){
+  if(S.omSource==='open-meteo')return{dot:'om',txt:'Conditions from Open-Meteo (more accurate right now)'};
+  if(S.omSource==='nws')return{dot:'nws',txt:'National Weather Service'};
+  return{dot:'both',txt:'NWS + Open-Meteo'};
+}
+
+// ─── BAD SCORE TOGGLE ────────────────────────────────────────
+let _bmView='now';
+function setBMView(v){
+  _bmView=v;
+  document.querySelectorAll('.bm-view-btn').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
+  const sc=v==='now'?calcBad().score:calcTodayScore();
+  const col=badCol(sc);
+  const scoreEl=document.getElementById('bm-score-val');
+  const fillEl=document.getElementById('bm-fill-bar');
+  const vibeEl=document.getElementById('bm-vibe-val');
+  if(scoreEl)scoreEl.textContent=sc;
+  if(fillEl){fillEl.style.width=sc+'%';fillEl.style.backgroundColor=col;}
+  if(vibeEl){vibeEl.textContent=badLbl(sc);vibeEl.style.color=col;}
+}
+function calcTodayScore(){
+  const ps=S.forecast?.periods||[];
+  const today=ps.filter(p=>{const d=new Date(p.startTime);const n=new Date();return d.toDateString()===n.toDateString();});
+  if(!today.length)return calcBad().score;
+  const scores=today.map(p=>{
+    const tf=tF(p),wf=wSpd(p),pf=prec(p),sf=sh(p).toLowerCase();
+    let s=0;
+    if(tf>=95||tf<=10)s+=25;else if(tf>=85||tf<=20)s+=10;
+    if(wf>=35)s+=20;else if(wf>=20)s+=8;
+    if(pf>=70)s+=20;else if(pf>=40)s+=12;else if(pf>=20)s+=5;
+    if(sf.includes('thunder'))s+=25;
+    if(sf.includes('snow')||sf.includes('blizzard'))s+=15;
+    return Math.min(99,s+(S.alerts?.length||0)*5);
+  });
+  return Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
+}
+
+// ─── OPTIMAL OUTSIDE WINDOW ──────────────────────────────────
+function buildOptimalWindowChip(){
+  if(!S.hourly)return'';
+  const now=new Date();
+  const hrs=S.hourly.periods.filter(p=>new Date(p.startTime)>=now).slice(0,14);
+  // Find best contiguous window (min 1h, show up to 4h stretch)
+  const scores=hrs.map(p=>{
+    const tf=tF(p),wf=wSpd(p),pf=prec(p),sf=sh(p).toLowerCase();
+    let s=0;
+    if(tf<35||tf>95)s+=40;else if(tf<45||tf>88)s+=15;
+    if(wf>=25)s+=15;else if(wf>=15)s+=5;
+    if(pf>=50)s+=30;else if(pf>=25)s+=12;
+    if(sf.includes('thunder'))s+=35;
+    if(sf.includes('rain')&&!sf.includes('chance'))s+=20;
+    // Penalize nighttime
+    const hr=new Date(p.startTime).getHours();
+    if(hr<6||hr>=21)s+=30;else if(hr<7||hr>=20)s+=10;
+    return Math.min(99,s);
+  });
+  // Find best stretch
+  let bestStart=-1,bestEnd=-1,bestAvg=999;
+  for(let i=0;i<scores.length;i++){
+    if(scores[i]>45)continue;
+    let j=i;
+    while(j<scores.length&&scores[j]<=45)j++;
+    const avg=scores.slice(i,j).reduce((a,b)=>a+b,0)/(j-i);
+    if(avg<bestAvg){bestAvg=avg;bestStart=i;bestEnd=Math.min(j,i+5);}
+    i=j;
+  }
+  if(bestStart===-1)return'';
+  const startDt=new Date(hrs[bestStart].startTime);
+  const endDt=new Date(hrs[Math.min(bestEnd,hrs.length-1)].startTime);
+  const fmt12=(dt)=>{const h=dt.getHours();return S.time12?(h%12||12)+' '+(h>=12?'PM':'AM'):String(h).padStart(2,'0')+':00';};
+  const quality=bestAvg<=10?'Great conditions':bestAvg<=20?'Good conditions':bestAvg<=35?'Decent window':'Tolerable window';
+  const startHr=startDt.getHours();
+  const label=startHr<12?'Morning':startHr<17?'Afternoon':startHr<20?'Evening':'Night';
+  return`<div class="opt-chip" onclick="switchTab('hourly')">
+    <div class="opt-chip-ico">🌤</div>
+    <div class="opt-chip-body">
+      <div class="opt-chip-title">Optimal Outside</div>
+      <div class="opt-chip-val">${fmt12(startDt)} – ${fmt12(endDt)}</div>
+      <div class="opt-chip-sub">${label} · ${quality}</div>
+    </div>
+    <div style="color:var(--accent);font-size:12px">→</div>
+  </div>`;
+}
+
+// ─── ACTIVITIES QUICK CHIP ────────────────────────────────────
+function buildActivityChip(){
+  if(!S.forecast||!S.hourly)return'';
+  // Find best activity for right now
+  const{score:sc}=calcBad();
+  const cur=getCur()||getDay();
+  const tf=tF(cur),wf=wSpd(cur),pf=prec(cur),sf=sh(cur).toLowerCase();
+  const ab=isActivelyBad();
+  const acts=[
+    {id:'run',ico:'🏃',lbl:'Run',ok:sc<=25&&!ab.rain&&tf>=35&&tf<=90&&wf<20},
+    {id:'drive',ico:'🚗',lbl:'Drive',ok:!ab.rain||sc<=30},
+    {id:'hike',ico:'🥾',lbl:'Hike',ok:sc<=30&&tf>=35&&tf<=95&&!ab.thunder&&wf<25},
+    {id:'bike',ico:'🚴',lbl:'Bike',ok:sc<=25&&!ab.rain&&tf>=35&&wf<18},
+  ];
+  const best=acts.find(a=>a.ok)||acts[0];
+  const allGood=acts.filter(a=>a.ok);
+  const anyGood=allGood.length>0;
+  const summary=anyGood
+    ?`Good for: ${allGood.map(a=>a.ico+' '+a.lbl).join(', ')}`
+    :`Tough conditions for outdoor activities`;
+  return`<div class="opt-chip" onclick="openActivity()">
+    <div class="opt-chip-ico">🎯</div>
+    <div class="opt-chip-body">
+      <div class="opt-chip-title">Activity Mode</div>
+      <div class="opt-chip-val">${anyGood?'✅ Get outside':'⚠️ Stay in'}</div>
+      <div class="opt-chip-sub">${summary}</div>
+    </div>
+    <div style="color:var(--accent);font-size:12px">→</div>
   </div>`;
 }
 
