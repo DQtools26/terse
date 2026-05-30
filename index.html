@@ -529,6 +529,20 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 .hu-hide-btn{background:none;border:none;font-family:'DM Sans',sans-serif;font-size:11px;color:var(--text3);cursor:pointer;padding:2px 4px;}
 .hu-hide-btn:hover{color:var(--text2);}
 .hu-home-section{margin-bottom:14px;}
+
+/* ─── BEST RUN + STORM CLEAR ─────────────────────────────── */
+.best-run-section{margin-top:12px;padding-top:12px;border-top:1px solid var(--glass-border);}
+.best-run-title{font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;}
+.best-run-window{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(var(--accent-rgb,130,140,248),0.1);border:1px solid var(--accent);border-radius:10px;}
+.best-run-ico{font-size:22px;}
+.best-run-time{font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--text);}
+.best-run-desc{font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text2);margin-top:1px;}
+.best-run-score{font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;margin-left:auto;flex-shrink:0;}
+.hr-best-badge{display:inline-block;background:var(--accent);color:#000;font-family:'Outfit',sans-serif;font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;margin-left:6px;vertical-align:middle;letter-spacing:0.3px;}
+.storm-clear-card{padding:13px 16px;margin-bottom:10px;}
+.storm-clear-title{font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;}
+.storm-clear-main{font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--text);line-height:1.3;}
+.storm-clear-sub{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text2);margin-top:4px;line-height:1.5;}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
@@ -999,6 +1013,7 @@ function initRadar(){
       '<div class="radar-toggles">'+
         '<button class="rv-tog on" id="rv-atog" onclick="rToggleAlerts()">⚠️ Alerts</button>'+
         '<button class="rv-tog" id="rv-wtog" onclick="rToggleWind()">💨 Wind</button>'+
+        '<button class="rv-tog" id="rv-htog" onclick="rToggleHeat()">🌡️ Temp</button>'+
       '</div>'+
     '</div>'+
     '<div class="radar-info">'+
@@ -1007,10 +1022,10 @@ function initRadar(){
     '</div>';
 
   setTimeout(()=>{
-    _rMap=L.map('radar-map',{zoomControl:true,attributionControl:true,maxZoom:12}).setView([S.lat||38.5,S.lon||-96],7);
+    _rMap=L.map('radar-map',{zoomControl:true,attributionControl:true,maxZoom:14}).setView([S.lat||38.5,S.lon||-96],7);
     // CartoDB Voyager — clean, readable at radar zoom levels
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
-      maxZoom:12,subdomains:'abcd',attribution:'© OpenStreetMap © CARTO'
+      maxZoom:14,maxNativeZoom:12,subdomains:'abcd',attribution:'© OpenStreetMap © CARTO'
     }).addTo(_rMap);
     if(S.lat&&S.lon){
       L.circleMarker([S.lat,S.lon],{radius:6,fillColor:'#fff',fillOpacity:1,color:getComputedStyle(document.body).getPropertyValue('--accent').trim()||'#818cf8',weight:3}).addTo(_rMap).bindPopup(S.name||'Your Location');
@@ -1087,7 +1102,7 @@ function rShowFrame(idx){
   const oldLayer=_rPrecip;
   _rPrecip=L.tileLayer(
     'https://tilecache.rainviewer.com'+frame.path+'/256/{z}/{x}/{y}/2/1_1.png',
-    {opacity:0,maxZoom:12,tileSize:256,zIndex:200,errorTileUrl:''}
+    {opacity:0,maxZoom:14,maxNativeZoom:10,tileSize:256,zIndex:200,errorTileUrl:''}
   ).addTo(_rMap);
   _rPrecip.once('load',()=>{
     _rPrecip.setOpacity(0.75);
@@ -1142,6 +1157,22 @@ function rToggleAlerts(){
   if(btn)btn.classList.toggle('on',_rAlertsOn);
   if(_rAlertsOn){rBuildAlertPolygons();}
   else if(_rAlerts){_rMap.removeLayer(_rAlerts);_rAlerts=null;}
+}
+
+let _rHeat=null,_rHeatOn=false;
+function rToggleHeat(){
+  _rHeatOn=!_rHeatOn;
+  const btn=document.getElementById('rv-htog');
+  if(btn)btn.classList.toggle('on',_rHeatOn);
+  if(_rHeatOn){
+    // Iowa State Mesonet surface temp layer — free, no key
+    _rHeat=L.tileLayer(
+      'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/ridge::USCOMP-N0Q-0/{z}/{x}/{y}.png',
+      {opacity:0.55,maxZoom:14,maxNativeZoom:9,zIndex:250,errorTileUrl:''}
+    ).addTo(_rMap);
+  }else{
+    if(_rHeat){_rMap.removeLayer(_rHeat);_rHeat=null;}
+  }
 }
 
 function rToggleWind(){
@@ -1902,7 +1933,7 @@ function renderHome(){
       </div>
     </div>
     ${buildNowCard(_nIco,tf,_nLine,_sunSt)}
-
+    ${buildStormClearCard()}
     <div class="glass-sm out-card">
       <div class="out-q">Should I go outside?</div>
       <div class="out-verdict" style="color:${sc<=25?'var(--green)':sc<=50?'var(--yellow)':'var(--red)'}">${out.v}</div>
@@ -2056,6 +2087,113 @@ function buildNowCard(ico,tf,nLine,sunSt){
   </div>`;
 }
 
+// ─── BEST TIME TO RUN ────────────────────────────────────────
+function bestRunWindow(){
+  if(!S.hourly)return null;
+  const now=new Date();
+  const hrs=S.hourly.periods.filter(p=>new Date(p.startTime)>=now).slice(0,14);
+  let best=null,bestScore=999;
+  hrs.forEach((p,i)=>{
+    const tf=tF(p),wf=wSpd(p),pf=prec(p),sf=sh(p).toLowerCase();
+    let score=0;
+    // Lower = better for running
+    if(tf<30||tf>95)score+=50;
+    else if(tf<40||tf>88)score+=25;
+    else if(tf<50||tf>82)score+=10;
+    if(wf>=25)score+=20;else if(wf>=15)score+=8;
+    if(pf>=60)score+=30;else if(pf>=30)score+=15;else if(pf>=15)score+=5;
+    if(sf.includes('thunder')||sf.includes('tornado'))score+=40;
+    if(sf.includes('rain')&&!sf.includes('chance'))score+=20;
+    if(sf.includes('snow'))score+=15;
+    if(score<bestScore){bestScore=score;best={p,score,idx:i};}
+  });
+  return best?{...best,hrs}:null;
+}
+
+function buildBestRunHTML(){
+  const b=bestRunWindow();
+  if(!b)return'';
+  const{p,score,idx}=b;
+  const tf=tF(p),wf=wSpd(p),pf=prec(p);
+  const dt=new Date(p.startTime);
+  const hr=dt.getHours();
+  const lbl=S.time12?(hr%12||12)+':00 '+(hr>=12?'PM':'AM'):String(hr).padStart(2,'0')+':00';
+  const endHr=hr+1;
+  const endLbl=S.time12?(endHr%12||endHr===12?endHr%12||12:12)+':00 '+(endHr>=12?'PM':'AM'):String(endHr).padStart(2,'0')+':00';
+  const qual=score<=10?'Great window 🟢':score<=20?'Decent window 🟡':score<=35?'Manageable 🟠':'Not great 🔴';
+  const details=[];
+  if(tf<50)details.push(fmt(tf)+', dress warm');
+  else if(tf>82)details.push(fmt(tf)+', stay hydrated');
+  else details.push(fmt(tf));
+  if(wf>=15)details.push('winds '+wf+'mph');
+  if(pf>=20)details.push(pf+'% rain chance');
+  else details.push('dry');
+  return`<div class="best-run-section">
+    <div class="best-run-title">🏃 Best time to run today</div>
+    <div class="best-run-window">
+      <div class="best-run-ico">🏃</div>
+      <div>
+        <div class="best-run-time">${lbl}</div>
+        <div class="best-run-desc">${details.join(' · ')}</div>
+      </div>
+      <div class="best-run-score" style="color:${score<=10?'var(--green)':score<=25?'var(--yellow)':'var(--red)'}">${qual}</div>
+    </div>
+  </div>`;
+}
+
+// ─── STORM CLEARING CARD ─────────────────────────────────────
+function buildStormClearCard(){
+  if(!S.hourly)return'';
+  const cur=getCur()||getDay();
+  if(!cur)return'';
+  const sf=sh(cur).toLowerCase();
+  const isBad=sf.includes('rain')||sf.includes('storm')||sf.includes('snow')||sf.includes('thunder')||sf.includes('blizzard')||sf.includes('sleet')||sf.includes('drizzle')||sf.includes('shower');
+  if(!isBad)return'';
+  const now=new Date();
+  const hrs=S.hourly.periods.filter(p=>new Date(p.startTime)>now);
+  // Find first clear hour
+  const clearIdx=hrs.findIndex(p=>{
+    const psf=sh(p).toLowerCase();
+    return!psf.includes('rain')&&!psf.includes('snow')&&!psf.includes('storm')&&!psf.includes('shower')&&!psf.includes('drizzle')&&!psf.includes('sleet');
+  });
+  if(clearIdx===-1)return`<div class="glass storm-clear-card">
+    <div class="storm-clear-title">🌧️ When does this end?</div>
+    <div class="storm-clear-main">Rough conditions persist through tonight.</div>
+    <div class="storm-clear-sub">No clear break in the next 12 hours.</div>
+  </div>`;
+  const clearP=hrs[clearIdx];
+  const dt=new Date(clearP.startTime);
+  const hr=dt.getHours();
+  const lbl=S.time12?(hr%12||12)+' '+(hr>=12?'PM':'AM'):String(hr).padStart(2,'0')+':00';
+  const thenTf=tF(clearP);
+  const t=tone();
+  const thenFeel=t.tL(thenTf).replace(/[.!?]+$/,'').toLowerCase();
+  // Find if bad returns later
+  const returnIdx=hrs.findIndex((p,i)=>{
+    if(i<=clearIdx)return false;
+    const psf=sh(p).toLowerCase();
+    return psf.includes('rain')||psf.includes('storm')||psf.includes('thunder');
+  });
+  let returnTxt='';
+  if(returnIdx!==-1){
+    const retP=hrs[returnIdx];
+    const rdt=new Date(retP.startTime);
+    const rhr=rdt.getHours();
+    const rlbl=S.time12?(rhr%12||12)+' '+(rhr>=12?'PM':'AM'):String(rhr).padStart(2,'0')+':00';
+    returnTxt=` Another round expected around ${rlbl}.`;
+  }
+  const mainLine=S.tone==='unhinged'
+    ?`Clears up around ${lbl}. Finally.`
+    :S.tone==='calm'
+    ?`Conditions should improve around ${lbl}.`
+    :`Clears around ${lbl}.`;
+  return`<div class="glass storm-clear-card">
+    <div class="storm-clear-title">🌧️ When does this end?</div>
+    <div class="storm-clear-main">${mainLine}</div>
+    <div class="storm-clear-sub">${thenFeel.charAt(0).toUpperCase()+thenFeel.slice(1)} after that.${returnTxt}</div>
+  </div>`;
+}
+
 // ─── ACTIVITY MODES ──────────────────────────────────────────
 const ACTIVITIES=[
   {id:'run',    ico:'🏃', lbl:'Run'},
@@ -2198,6 +2336,7 @@ function buildActivityResult(id){
       <div><div class="act-verdict-text">${verdictTxt}</div><div class="act-verdict-sub">${verdictSub}</div></div>
     </div>
     <div class="act-tips">${def.factors.map(f=>`<div class="act-tip">${f}</div>`).join('')}</div>
+    ${id==='run'?buildBestRunHTML():''}
   </div>`;
 }
 
@@ -2416,6 +2555,8 @@ function renderHourly(){
   const _hDir=grMap(_grHr.windDirection);
   const _dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   let h='<div class="fade-in">';
+  const _bestRun=bestRunWindow();
+  const _bestRunIdx=_bestRun?next.findIndex(p=>p.startTime===_bestRun.p.startTime):-1;
   next.forEach((p,idx)=>{
     const t=new Date(p.startTime);
     const hr=fmtHr(p.startTime);
@@ -2464,7 +2605,7 @@ function renderHourly(){
     hSc=Math.min(99,hSc);
     const hScCol=hSc>=60?'var(--red)':hSc>=35?'var(--yellow)':'var(--green)';
     h+=`<div class="hr-row${hlCls}">
-      <div class="hr-time">${isNow?'<span class="hr-now">NOW</span>':isNext?'<span class="hr-next">NEXT</span>':hr}</div>
+      <div class="hr-time">${isNow?'<span class="hr-now">NOW</span>':isNext?'<span class="hr-next">NEXT</span>':hr}${idx===_bestRunIdx?'<span class="hr-best-badge">RUN</span>':''}</div>
       <div class="hr-ico">${wIco(sf)}</div>
       <div class="hr-temp">${fmt(tf)}</div>
       <div class="hr-tags">
