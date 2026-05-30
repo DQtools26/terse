@@ -310,6 +310,7 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 .hr-ico{font-size:20px;width:24px;text-align:center;}
 .hr-temp{font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;letter-spacing:-0.5px;width:60px;}
 .hr-tags{flex:1;display:flex;flex-wrap:wrap;gap:5px;}
+.hr-score{font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;flex-shrink:0;margin-left:auto;padding-left:8px;opacity:0.9;}
 .hr-tag{font-size:11px;background:rgba(255,255,255,0.09);border-radius:6px;padding:3px 8px;color:var(--text2);}
 .hr-alert{font-size:12px;font-weight:700;color:var(--red);font-family:'Outfit',sans-serif;}
 
@@ -527,6 +528,7 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 .hu-title{font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);}
 .hu-hide-btn{background:none;border:none;font-family:'DM Sans',sans-serif;font-size:11px;color:var(--text3);cursor:pointer;padding:2px 4px;}
 .hu-hide-btn:hover{color:var(--text2);}
+.hu-home-section{margin-bottom:14px;}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
@@ -605,7 +607,7 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
     <div class="sidebar">
       <div class="glass side-nav">
         <button class="sn-btn active" id="sn-home" onclick="switchTab('home')"><span class="sn-ico">🏠</span>Now</button>
-        <button class="sn-btn" id="sn-warnings" onclick="switchTab('warnings')"><span class="sn-ico">⚠️</span>Upcoming</button>
+        <button class="sn-btn" id="sn-warnings" onclick="switchTab('warnings')"><span class="sn-ico">⚠️</span>Alerts</button>
         <button class="sn-btn" id="sn-hourly" onclick="switchTab('hourly')"><span class="sn-ico">🕐</span>Hourly</button>
         <button class="sn-btn" id="sn-future" onclick="switchTab('future')"><span class="sn-ico">📅</span>Week</button>
         <div class="sn-div"></div>
@@ -650,7 +652,7 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
     <button class="nav-btn active" id="nav-home" onclick="switchTab('home')"><div class="nav-ico">🌡️</div><div>Now</div><div class="nav-dot"></div></button>
-    <button class="nav-btn" id="nav-warnings" onclick="switchTab('warnings')"><div class="nav-ico">⚠️</div><div>Upcoming</div><div class="nav-dot"></div></button>
+    <button class="nav-btn" id="nav-warnings" onclick="switchTab('warnings')"><div class="nav-ico">⚠️</div><div>Alerts</div><div class="nav-dot"></div></button>
     <button class="nav-btn" id="nav-hourly" onclick="switchTab('hourly')"><div class="nav-ico">🕐</div><div>Hourly</div><div class="nav-dot"></div></button>
     <button class="nav-btn" id="nav-future" onclick="switchTab('future')"><div class="nav-ico">📅</div><div>Week</div><div class="nav-dot"></div></button>
     <button class="nav-btn" id="nav-radar" onclick="switchTab('radar')"><div class="nav-ico">🛰️</div><div>Radar</div><div class="nav-dot"></div></button>
@@ -1005,10 +1007,10 @@ function initRadar(){
     '</div>';
 
   setTimeout(()=>{
-    _rMap=L.map('radar-map',{zoomControl:true,attributionControl:true,maxZoom:10}).setView([S.lat||38.5,S.lon||-96],7);
+    _rMap=L.map('radar-map',{zoomControl:true,attributionControl:true,maxZoom:12}).setView([S.lat||38.5,S.lon||-96],7);
     // CartoDB Voyager — clean, readable at radar zoom levels
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
-      maxZoom:10,subdomains:'abcd',attribution:'© OpenStreetMap © CARTO'
+      maxZoom:12,subdomains:'abcd',attribution:'© OpenStreetMap © CARTO'
     }).addTo(_rMap);
     if(S.lat&&S.lon){
       L.circleMarker([S.lat,S.lon],{radius:6,fillColor:'#fff',fillOpacity:1,color:getComputedStyle(document.body).getPropertyValue('--accent').trim()||'#818cf8',weight:3}).addTo(_rMap).bindPopup(S.name||'Your Location');
@@ -1085,7 +1087,7 @@ function rShowFrame(idx){
   const oldLayer=_rPrecip;
   _rPrecip=L.tileLayer(
     'https://tilecache.rainviewer.com'+frame.path+'/256/{z}/{x}/{y}/2/1_1.png',
-    {opacity:0,maxZoom:10,tileSize:256,zIndex:200,errorTileUrl:''}
+    {opacity:0,maxZoom:12,tileSize:256,zIndex:200,errorTileUrl:''}
   ).addTo(_rMap);
   _rPrecip.once('load',()=>{
     _rPrecip.setOpacity(0.75);
@@ -1900,14 +1902,16 @@ function renderHome(){
       </div>
     </div>
     ${buildNowCard(_nIco,tf,_nLine,_sunSt)}
+
     <div class="glass-sm out-card">
       <div class="out-q">Should I go outside?</div>
       <div class="out-verdict" style="color:${sc<=25?'var(--green)':sc<=50?'var(--yellow)':'var(--red)'}">${out.v}</div>
       <div class="out-reason">${out.r}</div>
       ${ir!=='low'&&!ab.storm?`<div class="out-ir out-ir-${ir}">${ir==='high'?'⛈️ Storm likely later today':'🌦️ Isolated storm chance later'}</div>`:''}
     </div>
+    ${(()=>{const hu=_buildHUChips();return hu.length?`<div class="hu-home-section"><div class="chips-lbl" style="margin-bottom:7px;">⚡ Heads Up</div><div class="hu-strip">${hu.map(ch=>`<div class="hu-chip ${ch.cls}">${ch.ico} ${ch.txt}</div>`).join('')}</div></div>`:'';})()}
     <div class="chips-hdr">
-      <div class="chips-lbl">Right Now — ${wIco(sh(cur))} ${sh(cur).slice(0,26)}</div>
+      <div class="chips-lbl">${wIco(sh(cur))} Right Now</div>
       ${hasHidden?`<button class="show-btn" onclick="toggleHidden()">${S.showHidden?'Show less':'Show all'}</button>`:''}
     </div>
     <div class="chips-grid">
@@ -1919,8 +1923,7 @@ function renderHome(){
         <div class="chip-sub">${(c.sub||'').length>55?(c.sub||'').slice(0,55)+'…':(c.sub||'')}</div>
       </div>`).join('')}
     </div>
-    <button class="act-launch-btn" onclick="openActivity()">🎯 How's it for running? Driving? Hiking?</button>
-    <div class="foot">National Weather Service · Tap any card for details</div>
+    <div class="foot">National Weather Service · <button onclick="openActivity()" style="background:none;border:none;color:var(--accent);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;padding:0;">🎯 Activity Mode</button></div>
   </div>`;
   updateAmbChip();
 }
@@ -1966,26 +1969,27 @@ function buildNowCard(ico,tf,nLine,sunSt){
   const cloudPct=_grSkyCov!=null?_grSkyCov:null;
   let cloudWord='';
   if(cloudPct!=null){
-    if(cloudPct>=90)cloudWord='Overcast';
-    else if(cloudPct>=70)cloudWord='Mostly cloudy';
-    else if(cloudPct>=40)cloudWord='Partly cloudy';
-    else if(cloudPct>=15)cloudWord='Mostly clear';
-    else cloudWord='Clear';
+    if(cloudPct>=90)cloudWord='overcast';
+    else if(cloudPct>=70)cloudWord='mostly cloudy';
+    else if(cloudPct>=40)cloudWord='partly cloudy';
+    else if(cloudPct>=15)cloudWord='mostly clear';
+    else cloudWord='clear';
   }
-  // Condition sentence
-  let sky='';
-  if(sf.includes('tornado'))sky='Tornado possible';
-  else if(sf.includes('thunder')||sf.includes('t-storm'))sky='Thunderstorms right now';
-  else if(sf.includes('blizzard'))sky='Blizzard in progress';
-  else if(sf.includes('heavy snow'))sky='Snowing heavily';
-  else if(sf.includes('snow')&&!sf.includes('chance')&&!sf.includes('slight'))sky='Snowing';
-  else if(sf.includes('freezing rain')||sf.includes('sleet'))sky='Freezing rain and sleet';
-  else if(sf.includes('heavy rain'))sky='Raining hard';
-  else if(sf.includes('rain')&&!sf.includes('chance')&&!sf.includes('slight'))sky='Raining';
-  else if(sf.includes('drizzle'))sky='Light drizzle';
-  else if(sf.includes('shower'))sky='Showers moving through';
-  else if(sf.includes('fog')||sf.includes('mist'))sky='Foggy';
-  else sky=cloudWord||sh(cur);
+  // sky = gerund/adjective phrase that fits "It's ___"
+  // isPrecip = condition already implies clouds, skip cloudWord
+  let sky='',isPrecip=false;
+  if(sf.includes('tornado')){sky='under tornado conditions';isPrecip=true;}
+  else if(sf.includes('thunder')||sf.includes('t-storm')){sky='storming';isPrecip=true;}
+  else if(sf.includes('blizzard')){sky='a full blizzard out there';isPrecip=true;}
+  else if(sf.includes('heavy snow')){sky='snowing heavily';isPrecip=true;}
+  else if(sf.includes('snow')&&!sf.includes('chance')&&!sf.includes('slight')){sky='snowing';isPrecip=true;}
+  else if(sf.includes('freezing rain')||sf.includes('sleet')){sky='sleeting';isPrecip=true;}
+  else if(sf.includes('heavy rain')){sky='raining hard';isPrecip=true;}
+  else if(sf.includes('rain')&&!sf.includes('chance')&&!sf.includes('slight')){sky='raining';isPrecip=true;}
+  else if(sf.includes('drizzle')){sky='drizzling';isPrecip=true;}
+  else if(sf.includes('shower')){sky='showery';isPrecip=true;}
+  else if(sf.includes('fog')||sf.includes('mist')){sky='foggy';isPrecip=false;}
+  else{sky=cloudWord||sh(cur).toLowerCase();isPrecip=false;}
 
 
   // Secondary notes
@@ -2011,20 +2015,36 @@ function buildNowCard(ico,tf,nLine,sunSt){
         <div class="now-temp">${fmt(tf)}</div>
         <div class="now-stmt-text">${(()=>{
           const t=tone();
-          // Condition phrase — only add cloudWord if it doesn't contradict sky
-          const condIsWeather=sky!==cloudWord&&sky!==sh(cur);
-          const showCloud=cloudWord&&!condIsWeather&&cloudWord.toLowerCase()!==sky.toLowerCase();
           const parts=[];
-          if(sky)parts.push(sky.toLowerCase());
-          if(showCloud)parts.push(cloudWord.toLowerCase());
-          // Tone-aware temp feel — pull from T engine, strip trailing period
-          const tFeel=t.tL(tf).replace(/[.!]+$/,'').toLowerCase();
-          parts.push(tFeel);
+          if(sky)parts.push(sky);
+          if(cloudWord&&!isPrecip&&sky!==cloudWord)parts.push(cloudWord);
+          if(!isPrecip){
+            const tFeel=t.tL(tf).replace(/[.!?]+$/,'').toLowerCase();
+            parts.push(tFeel);
+          }
           if(wf>=25)parts.push('very windy');
           else if(wf>=15)parts.push('breezy');
-          if(parts.length===1)return'It\'s '+parts[0]+'.';
-          if(parts.length===2)return'It\'s '+parts[0]+' and '+parts[1]+'.';
-          return'It\'s '+parts.slice(0,-1).join(', ')+', and '+parts[parts.length-1]+'.';
+          let stmt='';
+          if(parts.length===1)stmt='It\'s '+parts[0]+'.';
+          else if(parts.length===2)stmt='It\'s '+parts[0]+' and '+parts[1]+'.';
+          else stmt='It\'s '+parts.slice(0,-1).join(', ')+', and '+parts[parts.length-1]+'.';
+          // If currently precipitating, look ahead for when it clears
+          if(isPrecip&&S.hourly){
+            const hrs=S.hourly.periods||[];
+            const clearHour=hrs.slice(1,12).find(p=>{
+              const psf=sh(p).toLowerCase();
+              return!psf.includes('rain')&&!psf.includes('snow')&&!psf.includes('storm')&&!psf.includes('shower')&&!psf.includes('drizzle')&&!psf.includes('sleet');
+            });
+            if(clearHour){
+              const dt=new Date(clearHour.startTime);
+              const hr=dt.getHours();
+              const lbl=S.time12?(hr%12||12)+' '+(hr>=12?'PM':'AM'):String(hr).padStart(2,'0')+':00';
+              const thenTf=tF(clearHour);
+              const thenFeel=t.tL(thenTf).replace(/[.!?]+$/,'').toLowerCase();
+              stmt+=' Should clear around '+lbl+' — '+thenFeel+' after that.';
+            }
+          }
+          return stmt;
         })()}</div>
         ${sub?`<div class="now-stmt-dots">${sub}</div>`:''}
       </div>
@@ -2323,17 +2343,9 @@ function buildHeadsUp(){
 // ─── WARNINGS ────────────────────────────────────────────────
 function renderWarnings(){
   const al=S.alerts||[];
-  // Build heads-up chips section
-  const huChips=_buildHUChips();
-  const huSection=huChips.length
-    ?`<div style="margin-bottom:14px;">
-        <div class="radar-info-title" style="margin-bottom:8px;">⚡ Heads Up</div>
-        <div class="hu-strip">${huChips.map(ch=>`<div class="hu-chip ${ch.cls}">${ch.ico} ${ch.txt}</div>`).join('')}</div>
-      </div>`
-    :'';
   if(!al.length){
     const m={calm:'No active NWS alerts for your area.',terse:'No alerts. The weather is being normal.',unhinged:'No active alerts! The sky is behaving itself for once! Suspicious.'};
-    document.getElementById('warn-inner').innerHTML=`<div class="fade-in">${huSection}<div class="all-clear"><div class="ac-icon">✅</div><div class="ac-title">All Clear</div><div class="ac-sub">${m[S.tone]||m.terse}</div></div></div>`;
+    document.getElementById('warn-inner').innerHTML=`<div class="all-clear fade-in"><div class="ac-icon">✅</div><div class="ac-title">All Clear</div><div class="ac-sub">${m[S.tone]||m.terse}</div></div>`;
     return;
   }
   const _polyAlerts=al.filter(a=>a._scope==='polygon');
@@ -2372,7 +2384,7 @@ function renderWarnings(){
     </div>`;
   });
   h+='</div>';
-  document.getElementById('warn-inner').innerHTML='<div class="fade-in">'+huSection+h+'</div>';
+  document.getElementById('warn-inner').innerHTML=h;
 }
 function xlateAlert(evt){
   const e=evt.toLowerCase(),tn=S.tone;
@@ -2442,6 +2454,15 @@ function renderHourly(){
     if(_app!=null&&Math.abs(_app-tf)>=4)tags.push('feels '+fmt(_app));
     if(_dew!=null&&_dew>=65)tags.push('💧dew '+fmt(_dew));
     if(snow)tags.push('❄️ '+(sfl.includes('ice')||sfl.includes('sleet')?'Ice/Sleet':'Snow'));
+    // Per-hour bad score
+    let hSc=0;
+    if(tf>=95||tf<=10)hSc+=25;else if(tf>=85||tf<=20)hSc+=10;
+    if(wf>=35)hSc+=20;else if(wf>=20)hSc+=8;
+    if(pf>=70)hSc+=20;else if(pf>=40)hSc+=10;else if(pf>=20)hSc+=4;
+    if(sfl.includes('thunder')||sfl.includes('tornado'))hSc+=25;
+    if(S.alerts?.length)hSc+=5;
+    hSc=Math.min(99,hSc);
+    const hScCol=hSc>=60?'var(--red)':hSc>=35?'var(--yellow)':'var(--green)';
     h+=`<div class="hr-row${hlCls}">
       <div class="hr-time">${isNow?'<span class="hr-now">NOW</span>':isNext?'<span class="hr-next">NEXT</span>':hr}</div>
       <div class="hr-ico">${wIco(sf)}</div>
@@ -2451,6 +2472,7 @@ function renderHourly(){
         <div class="hr-tag hr-cond">${sf.length>28?sf.slice(0,28)+'…':sf}</div>
         ${storm?`<div class="hr-alert" style="color:${_stormTier==='likely'?'var(--red)':'var(--yellow)'}">${S.tone==='unhinged'?(_stormTier==='likely'?'⛈️ STORMS LIKELY':_stormTier==='possible'?'⛈️ Storm possible':'⚡ maybe storms??'):stormLbl}</div>`:''}
       </div>
+      <div class="hr-score" style="color:${hScCol}">${hSc}</div>
     </div>`;
   });
   h+='</div>';
