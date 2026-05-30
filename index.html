@@ -543,6 +543,17 @@ body{font-family:'DM Sans',sans-serif;min-height:100vh;color:var(--text);overflo
 .storm-clear-title{font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;}
 .storm-clear-main{font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--text);line-height:1.3;}
 .storm-clear-sub{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text2);margin-top:4px;line-height:1.5;}
+
+/* ─── WEEK TERSE BREAKDOWN ───────────────────────────────── */
+.wk-breakdown{margin-top:14px;}
+.wk-breakdown-title{font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:10px;padding:0 2px;}
+.wk-day-card{padding:12px 14px;border-radius:var(--radius-sm);background:var(--glass);border:1px solid var(--glass-border);margin-bottom:8px;}
+.wk-day-card-top{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+.wk-day-name{font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;color:var(--text);width:32px;flex-shrink:0;}
+.wk-day-ico{font-size:18px;flex-shrink:0;}
+.wk-day-comment{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);flex:1;line-height:1.4;}
+.wk-day-score{font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;flex-shrink:0;margin-left:auto;}
+.wk-day-sub{font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text3);padding-left:60px;line-height:1.4;}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
@@ -2703,8 +2714,101 @@ function renderFutureSummary(){
     </div>`;
   });
   h+=`</div>`;
+  h+=buildWeekBreakdown(days);
   h+='</div>';
   document.getElementById('fp-summary').innerHTML=h;
+}
+
+// ─── WEEK TERSE BREAKDOWN ────────────────────────────────────
+function buildWeekBreakdown(days){
+  const t=tone();
+  const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+  return`<div class="wk-breakdown">
+    <div class="wk-breakdown-title">The Breakdown</div>
+    ${days.map(d=>{
+      const sf=d.sf.toLowerCase();
+      const sc=calcDayScore(d);
+      const col=sc>=60?'var(--red)':sc>=35?'var(--yellow)':'var(--green)';
+      const{comment,sub}=dayComment(d,t);
+      return`<div class="wk-day-card">
+        <div class="wk-day-card-top">
+          <div class="wk-day-name">${d.name}</div>
+          <div class="wk-day-ico">${d.ico}</div>
+          <div class="wk-day-comment">${comment}</div>
+          <div class="wk-day-score" style="color:${col}">${sc}</div>
+        </div>
+        ${sub?`<div class="wk-day-sub">${sub}</div>`:''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function calcDayScore(d){
+  let s=0;
+  const sf=d.sf.toLowerCase();
+  if(d.high>=95||d.low<=10)s+=25;else if(d.high>=85||d.low<=20)s+=10;
+  if(d.prec>=70)s+=20;else if(d.prec>=40)s+=12;else if(d.prec>=20)s+=5;
+  if(sf.includes('thunder')||sf.includes('tornado'))s+=25;
+  if(sf.includes('snow')||sf.includes('blizzard'))s+=15;
+  if(sf.includes('ice')||sf.includes('sleet'))s+=18;
+  if(d.high-d.low>=30)s+=5;
+  return Math.min(99,s);
+}
+
+function dayComment(d,t){
+  const sf=d.sf.toLowerCase();
+  const sc=calcDayScore(d);
+  let comment='',sub='';
+
+  // Determine main story for the day
+  const isStorm=sf.includes('thunder')||sf.includes('tornado');
+  const isRain=sf.includes('rain')||sf.includes('shower')||sf.includes('drizzle');
+  const isSnow=sf.includes('snow')||sf.includes('blizzard')||sf.includes('sleet')||sf.includes('ice');
+  const isHot=d.high>=95;
+  const isWarm=d.high>=82;
+  const isCold=d.high<=32;
+  const isCool=d.high<=45;
+  const isClear=sf.includes('clear')||sf.includes('sunny');
+  const isCloud=sf.includes('cloud')||sf.includes('overcast');
+
+  if(S.tone==='unhinged'){
+    if(isStorm&&d.prec>=60)     {comment=`${d.name}: The sky has declared war. Storms likely.`;sub=`${fmt(d.high)}/${fmt(d.low)} · ${d.prec}% rain chance`;}
+    else if(isStorm)            {comment=`${d.name}: Storm vibes. Could get spicy.`;sub=`${fmt(d.high)}/${fmt(d.low)} · ${d.prec}% storm chance`;}
+    else if(isSnow)             {comment=`${d.name}: Snow incoming. The sky chose ice.`;sub=`${fmt(d.high)}/${fmt(d.low)} · ${d.sf}`;}
+    else if(isRain&&d.prec>=60) {comment=`${d.name}: It's going to rain. A lot. Probably.`;sub=`${fmt(d.high)}/${fmt(d.low)} · ${d.prec}% chance`;}
+    else if(isRain)             {comment=`${d.name}: Rain possible. Maybe. Who knows.`;sub=`${fmt(d.high)}/${fmt(d.low)} · ${d.prec}% chance`;}
+    else if(isHot)              {comment=`${d.name}: Hot. So unbearably hot. Hydrate or else.`;sub=`High ${fmt(d.high)} / Low ${fmt(d.low)}`;}
+    else if(isWarm)             {comment=`${d.name}: Warm and ${isCloud?'cloudy':'sunny'}. Could be worse.`;sub=`High ${fmt(d.high)} / Low ${fmt(d.low)}`;}
+    else if(isCold)             {comment=`${d.name}: Freezing. Stay inside, you absolute legend.`;sub=`High ${fmt(d.high)} / Low ${fmt(d.low)}`;}
+    else if(isCool)             {comment=`${d.name}: Kinda cold. Jacket territory.`;sub=`High ${fmt(d.high)} / Low ${fmt(d.low)}`;}
+    else if(isClear&&sc<=10)    {comment=`${d.name}: Actually a great day?? Suspicious.`;sub=`High ${fmt(d.high)} / Low ${fmt(d.low)}`;}
+    else                        {comment=`${d.name}: Fine. Just... fine.`;sub=`High ${fmt(d.high)} / Low ${fmt(d.low)}`;}
+  } else if(S.tone==='calm'){
+    if(isStorm&&d.prec>=60)     {comment=`Thunderstorms expected ${d.name}. Plan accordingly.`;sub=`${fmt(d.high)}/${fmt(d.low)} · ${d.prec}% precipitation`;}
+    else if(isStorm)            {comment=`Storm activity possible ${d.name}.`;sub=`${fmt(d.high)}/${fmt(d.low)} · ${d.prec}% storm chance`;}
+    else if(isSnow)             {comment=`Snow expected ${d.name}.`;sub=`${fmt(d.high)}/${fmt(d.low)} · ${d.sf}`;}
+    else if(isRain&&d.prec>=60) {comment=`Rainy conditions likely ${d.name}.`;sub=`${fmt(d.high)}/${fmt(d.low)} · ${d.prec}% chance`;}
+    else if(isRain)             {comment=`Chance of rain ${d.name}.`;sub=`${fmt(d.high)}/${fmt(d.low)} · ${d.prec}% chance`;}
+    else if(isHot)              {comment=`Very hot ${d.name}. Stay hydrated and cool.`;sub=`High ${fmt(d.high)} / Low ${fmt(d.low)}`;}
+    else if(isCold)             {comment=`Below freezing ${d.name}. Dress warmly.`;sub=`High ${fmt(d.high)} / Low ${fmt(d.low)}`;}
+    else if(isClear&&sc<=10)    {comment=`A pleasant ${d.name}. Good conditions overall.`;sub=`High ${fmt(d.high)} / Low ${fmt(d.low)}`;}
+    else                        {comment=`Typical conditions for ${d.name}.`;sub=`High ${fmt(d.high)} / Low ${fmt(d.low)}`;}
+  } else {
+    // terse (default)
+    if(isStorm&&d.prec>=60)     {comment=`${d.name} — storms. ${d.prec}% chance. Don't ignore this.`;sub=`${fmt(d.high)}/${fmt(d.low)}`;}
+    else if(isStorm)            {comment=`${d.name} — storm chance. Watch the radar.`;sub=`${fmt(d.high)}/${fmt(d.low)} · ${d.prec}%`;}
+    else if(isSnow)             {comment=`${d.name} — snow. That's happening.`;sub=`${fmt(d.high)}/${fmt(d.low)} · ${d.sf}`;}
+    else if(isRain&&d.prec>=60) {comment=`${d.name} — it's going to rain. Plan for it.`;sub=`${fmt(d.high)}/${fmt(d.low)} · ${d.prec}%`;}
+    else if(isRain)             {comment=`${d.name} — rain possible. Maybe bring something.`;sub=`${fmt(d.high)}/${fmt(d.low)} · ${d.prec}%`;}
+    else if(isHot)              {comment=`${d.name} — it's going to be hot. Uncomfortably so.`;sub=`High ${fmt(d.high)} / Low ${fmt(d.low)}`;}
+    else if(isWarm&&isClear)    {comment=`${d.name} — warm and sunny. Get outside.`;sub=`High ${fmt(d.high)} / Low ${fmt(d.low)}`;}
+    else if(isCold)             {comment=`${d.name} — cold. Below freezing cold.`;sub=`High ${fmt(d.high)} / Low ${fmt(d.low)}`;}
+    else if(isCool)             {comment=`${d.name} — jacket weather.`;sub=`High ${fmt(d.high)} / Low ${fmt(d.low)}`;}
+    else if(isClear&&sc<=10)    {comment=`${d.name} — genuinely nice. Touch some grass.`;sub=`High ${fmt(d.high)} / Low ${fmt(d.low)}`;}
+    else                        {comment=`${d.name} — nothing major. ${d.sf}.`;sub=`High ${fmt(d.high)} / Low ${fmt(d.low)}`;}
+  }
+  return{comment,sub};
 }
 
 // ─── GRAPHS ──────────────────────────────────────────────────
